@@ -1,0 +1,1098 @@
+var
+  vardiyaatama: TCLForm;
+
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  pnlHeader, pnlContent: TclProPanel;
+  scrollMain: TClVertScrollBox;
+
+  pnlPersonelAlan, pnlGunler, pnlGunRow1, pnlGunRow2, pnlGunRow3, pnlGunRow4, pnlVardiya: TclProPanel;
+  pnlListeAlan: TclProPanel;
+
+  scrollPersonel: TClVertScrollBox;
+  scrollVardiyalar: TClVertScrollBox;
+
+  lblBaslik, lblPersonelBaslik, lblSeciliPersonel: TclProLabel;
+  lblGunBaslik, lblVardiyaBaslik, lblListeBaslik: TclProLabel;
+
+  btnGeri, btnPersonelAra: TclProButton;
+  btnGun1, btnGun2, btnGun3, btnGun4, btnGun5, btnGun6, btnGun7: TclProButton;
+  btnSabah, btnAksam, btnGece, btnKaydet, btnYenile: TclProButton;
+
+  edtPersonelAra: TclProEdit;
+
+  seciliTarih, seciliGunAdi: String;
+  seciliVardiya, seciliBaslangic, seciliBitis: String;
+  seciliPersonelAd, seciliPersonelEmail, seciliPersonelDept: String;
+
+  duzenlemeModu: Boolean;
+  seciliShiftId: String;
+
+  personelListeNo, vardiyaListeNo: Integer;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+void GoBack
+{
+  vardiyaatama.clHide;
+  Clomosy.RunUnit('yonetici');
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    sonuc = '';
+    Result = sonuc;
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+void SetButtonPassive(btn: TclProButton)
+{
+  btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  btn.clProSettings.BorderWidth = 1;
+  btn.clProSettings.IsRound = True;
+  btn.clProSettings.RoundHeight = 8;
+  btn.clProSettings.RoundWidth = 8;
+  btn.clProSettings.FontHorzAlign = palCenter;
+  btn.clProSettings.FontVertAlign = palCenter;
+  btn.SetclProSettings(btn.clProSettings);
+}
+
+
+void SetButtonActive(btn: TclProButton)
+{
+  btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btn.clProSettings.BorderWidth = 1;
+  btn.clProSettings.IsRound = True;
+  btn.clProSettings.RoundHeight = 8;
+  btn.clProSettings.RoundWidth = 8;
+  btn.clProSettings.FontHorzAlign = palCenter;
+  btn.clProSettings.FontVertAlign = palCenter;
+  btn.SetclProSettings(btn.clProSettings);
+}
+
+
+void GunButonlariniSifirla
+{
+  SetButtonPassive(btnGun1);
+  SetButtonPassive(btnGun2);
+  SetButtonPassive(btnGun3);
+  SetButtonPassive(btnGun4);
+  SetButtonPassive(btnGun5);
+  SetButtonPassive(btnGun6);
+  SetButtonPassive(btnGun7);
+}
+
+
+void VardiyaButonlariniSifirla
+{
+  SetButtonPassive(btnSabah);
+  SetButtonPassive(btnAksam);
+  SetButtonPassive(btnGece);
+}
+
+
+void GunButonYazilariniHazirla
+{
+  btnGun1.Text = 'Bugün ' + FormatDateTime('dd.mm', Now);
+  btnGun2.Text = 'Yarın ' + FormatDateTime('dd.mm', Now + 1);
+  btnGun3.Text = FormatDateTime('dd.mm', Now + 2);
+  btnGun4.Text = FormatDateTime('dd.mm', Now + 3);
+  btnGun5.Text = FormatDateTime('dd.mm', Now + 4);
+  btnGun6.Text = FormatDateTime('dd.mm', Now + 5);
+  btnGun7.Text = FormatDateTime('dd.mm', Now + 6);
+
+  btnGun1.SetclProSettings(btnGun1.clProSettings);
+  btnGun2.SetclProSettings(btnGun2.clProSettings);
+  btnGun3.SetclProSettings(btnGun3.clProSettings);
+  btnGun4.SetclProSettings(btnGun4.clProSettings);
+  btnGun5.SetclProSettings(btnGun5.clProSettings);
+  btnGun6.SetclProSettings(btnGun6.clProSettings);
+  btnGun7.SetclProSettings(btnGun7.clProSettings);
+}
+
+
+void PersonelSec
+var
+  btn: TClProButton;
+  data: String;
+  p1, p2: Integer;
+{
+  btn = TClProButton(vardiyaatama.clSender);
+  data = btn.TagString;
+
+  p1 = Pos('|', data);
+
+  if (p1 > 0)
+  {
+    seciliPersonelAd = Copy(data, 1, p1 - 1);
+    data = Copy(data, p1 + 1, Length(data));
+
+    p2 = Pos('|', data);
+
+    if (p2 > 0)
+    {
+      seciliPersonelEmail = Copy(data, 1, p2 - 1);
+      seciliPersonelDept = Copy(data, p2 + 1, Length(data));
+    }
+  }
+
+  lblSeciliPersonel.Text = 'Seçili personel: ' + seciliPersonelAd + ' | ' + seciliPersonelDept;
+  lblSeciliPersonel.SetclProSettings(lblSeciliPersonel.clProSettings);
+
+  btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btn.SetclProSettings(btn.clProSettings);
+}
+
+
+void PersonelButonuOlustur(index: Integer; adSoyad: String; email: String; departman: String)
+var
+  btn: TClProButton;
+{
+  btn = vardiyaatama.AddNewProButton(scrollPersonel, 'btnPersonel' + IntToStr(personelListeNo) + '_' + IntToStr(index), adSoyad + ' | ' + departman);
+
+  btn.Align = alTop;
+  btn.Height = 42;
+  btn.Margins.Top = 6;
+  btn.Margins.Left = 8;
+  btn.Margins.Right = 8;
+  btn.TagString = adSoyad + '|' + email + '|' + departman;
+
+  btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  btn.clProSettings.BorderWidth = 1;
+  btn.clProSettings.FontSize = 12;
+  btn.clProSettings.IsRound = True;
+  btn.clProSettings.RoundHeight = 8;
+  btn.clProSettings.RoundWidth = 8;
+  btn.SetclProSettings(btn.clProSettings);
+
+  vardiyaatama.AddNewEvent(btn, tbeOnClick, 'PersonelSec');
+}
+
+
+void PersonelleriYukle
+var
+  url, response, kalan, kisi, adSoyad, email, departman, arama: String;
+  index, ayir1, ayir2, bitis: Integer;
+{
+  try
+    arama = edtPersonelAra.Text;
+
+    scrollPersonel.Visible = False;
+    personelListeNo = personelListeNo + 1;
+
+    scrollPersonel = vardiyaatama.AddNewVertScrollBox(pnlPersonelAlan, 'scrollPersonel' + IntToStr(personelListeNo));
+    scrollPersonel.Align = alClient;
+    scrollPersonel.Margins.Top = 4;
+    scrollPersonel.ShowScrollBars = True;
+
+    url = SUPABASE_URL + '/rpc/list_personel_picker';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = '{}';
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    kalan = response;
+    index = 0;
+
+    while (Length(kalan) > 0)
+    {
+      bitis = Pos(';;', kalan);
+
+      if (bitis > 0)
+      {
+        kisi = Copy(kalan, 1, bitis - 1);
+        kalan = Copy(kalan, bitis + 2, Length(kalan));
+      }
+      else
+      {
+        kisi = kalan;
+        kalan = '';
+      }
+
+      ayir1 = Pos('|', kisi);
+
+      if (ayir1 > 0)
+      {
+        adSoyad = Copy(kisi, 1, ayir1 - 1);
+        kisi = Copy(kisi, ayir1 + 1, Length(kisi));
+
+        ayir2 = Pos('|', kisi);
+
+        if (ayir2 > 0)
+        {
+          email = Copy(kisi, 1, ayir2 - 1);
+          departman = Copy(kisi, ayir2 + 1, Length(kisi));
+
+          if (arama == '')
+          {
+            PersonelButonuOlustur(index, adSoyad, email, departman);
+            index = index + 1;
+          }
+          else
+          {
+            if (Pos(arama, adSoyad) > 0)
+            {
+              PersonelButonuOlustur(index, adSoyad, email, departman);
+              index = index + 1;
+            }
+          }
+        }
+      }
+    }
+
+  except
+    ShowMessage('Personel listesi alınamadı: ' + LastExceptionMessage);
+  }
+}
+
+
+void VardiyaSatiriOlustur(index: Integer; shiftId: String; adSoyad: String; vardiya: String; basSaat: String; bitSaat: String)
+var
+  pnlSatir: TclProPanel;
+  lblBilgi: TclProLabel;
+  btnDuzenle, btnSil: TclProButton;
+  data: String;
+{
+  data = shiftId + '|' + adSoyad + '|' + vardiya + '|' + basSaat + '|' + bitSaat;
+
+  pnlSatir = vardiyaatama.AddNewProPanel(scrollVardiyalar, 'pnlShift' + IntToStr(vardiyaListeNo) + '_' + IntToStr(index));
+  pnlSatir.Align = alTop;
+  pnlSatir.Height = 72;
+  pnlSatir.Margins.Top = 6;
+  pnlSatir.Margins.Left = 8;
+  pnlSatir.Margins.Right = 8;
+  pnlSatir.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlSatir.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlSatir.clProSettings.BorderWidth = 1;
+  pnlSatir.clProSettings.IsRound = True;
+  pnlSatir.clProSettings.RoundHeight = 8;
+  pnlSatir.clProSettings.RoundWidth = 8;
+  pnlSatir.SetclProSettings(pnlSatir.clProSettings);
+
+  lblBilgi = vardiyaatama.AddNewProLabel(pnlSatir, 'lblShift' + IntToStr(vardiyaListeNo) + '_' + IntToStr(index), adSoyad + ' | ' + vardiya + ' | ' + basSaat + ' - ' + bitSaat);
+  lblBilgi.Align = alTop;
+  lblBilgi.Height = 32;
+  lblBilgi.Margins.Left = 12;
+  lblBilgi.Margins.Right = 12;
+  lblBilgi.clProSettings.FontSize = 12;
+  lblBilgi.clProSettings.FontVertAlign = palCenter;
+  lblBilgi.clProSettings.TextSettings.WordWrap = True;
+  lblBilgi.SetclProSettings(lblBilgi.clProSettings);
+
+  if (shiftId <> 'bos')
+  {
+    btnSil = vardiyaatama.AddNewProButton(pnlSatir, 'btnSil' + IntToStr(vardiyaListeNo) + '_' + IntToStr(index), 'Sil');
+    btnSil.Align = alRight;
+    btnSil.Width = 70;
+    btnSil.Margins.Top = 7;
+    btnSil.Margins.Bottom = 7;
+    btnSil.Margins.Right = 6;
+    btnSil.TagString = shiftId;
+    btnSil.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEE2E2');
+    btnSil.clProSettings.FontColor = clAlphaColor.clHexToColor('#DC2626');
+    btnSil.clProSettings.BorderWidth = 0;
+    btnSil.clProSettings.IsRound = True;
+    btnSil.clProSettings.RoundHeight = 8;
+    btnSil.clProSettings.RoundWidth = 8;
+    btnSil.SetclProSettings(btnSil.clProSettings);
+    vardiyaatama.AddNewEvent(btnSil, tbeOnClick, 'VardiyaSil');
+
+    btnDuzenle = vardiyaatama.AddNewProButton(pnlSatir, 'btnDuzenle' + IntToStr(vardiyaListeNo) + '_' + IntToStr(index), 'Düzenle');
+    btnDuzenle.Align = alRight;
+    btnDuzenle.Width = 90;
+    btnDuzenle.Margins.Top = 7;
+    btnDuzenle.Margins.Bottom = 7;
+    btnDuzenle.Margins.Right = 6;
+    btnDuzenle.TagString = data;
+    btnDuzenle.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+    btnDuzenle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+    btnDuzenle.clProSettings.BorderWidth = 0;
+    btnDuzenle.clProSettings.IsRound = True;
+    btnDuzenle.clProSettings.RoundHeight = 8;
+    btnDuzenle.clProSettings.RoundWidth = 8;
+    btnDuzenle.SetclProSettings(btnDuzenle.clProSettings);
+    vardiyaatama.AddNewEvent(btnDuzenle, tbeOnClick, 'VardiyaDuzenle');
+  }
+}
+
+
+void ListeyiYukle
+var
+  url, body, response, kalan, satir: String;
+  shiftId, adSoyad, vardiya, basSaat, bitSaat: String;
+  p1, p2, p3, p4, bitis, index: Integer;
+{
+  try
+    if (seciliTarih == '')
+    {
+      lblListeBaslik.Text = 'Önce gün seçiniz.';
+      lblListeBaslik.SetclProSettings(lblListeBaslik.clProSettings);
+    }
+    else
+    {
+      if (scrollVardiyalar <> nil)
+      {
+        scrollVardiyalar.Visible = False;
+      }
+
+      vardiyaListeNo = vardiyaListeNo + 1;
+
+      scrollVardiyalar = vardiyaatama.AddNewVertScrollBox(pnlListeAlan, 'scrollVardiyalar' + IntToStr(vardiyaListeNo));
+      scrollVardiyalar.Align = alClient;
+      scrollVardiyalar.ShowScrollBars = True;
+
+      lblListeBaslik.Text = seciliGunAdi + ' | ' + seciliTarih;
+      lblListeBaslik.SetclProSettings(lblListeBaslik.clProSettings);
+
+      url = SUPABASE_URL + '/rpc/list_shifts_manage_by_date';
+      body = '{"p_shift_date":"' + seciliTarih + '"}';
+
+      RestClient = TclRest.Create;
+      RestClient.BaseURL = url;
+      RestClient.Accept = 'application/json';
+      RestClient.ContentType = 'application/json';
+      RestClient.Method = rmPOST;
+
+      RestClient.AddHeader('apikey', SUPABASE_KEY);
+      RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+      RestClient.Body = body;
+      RestClient.Execute;
+
+      response = RestClient.Response;
+      response = SupabaseTextTemizle(response);
+
+      if (response == '')
+      {
+        VardiyaSatiriOlustur(0, 'bos', 'Bu gün için atanmış vardiya yok.', '-', '-', '-');
+      }
+      else if (response == 'null')
+      {
+        VardiyaSatiriOlustur(0, 'bos', 'Bu gün için atanmış vardiya yok.', '-', '-', '-');
+      }
+      else if (response == '[]')
+      {
+        VardiyaSatiriOlustur(0, 'bos', 'Bu gün için atanmış vardiya yok.', '-', '-', '-');
+      }
+      else
+      {
+        kalan = response;
+        index = 0;
+
+        while (Length(kalan) > 0)
+        {
+          bitis = Pos(';;', kalan);
+
+          if (bitis > 0)
+          {
+            satir = Copy(kalan, 1, bitis - 1);
+            kalan = Copy(kalan, bitis + 2, Length(kalan));
+          }
+          else
+          {
+            satir = kalan;
+            kalan = '';
+          }
+
+          p1 = Pos('|', satir);
+
+          if (p1 > 0)
+          {
+            shiftId = Copy(satir, 1, p1 - 1);
+            satir = Copy(satir, p1 + 1, Length(satir));
+
+            p2 = Pos('|', satir);
+
+            if (p2 > 0)
+            {
+              adSoyad = Copy(satir, 1, p2 - 1);
+              satir = Copy(satir, p2 + 1, Length(satir));
+
+              p3 = Pos('|', satir);
+
+              if (p3 > 0)
+              {
+                vardiya = Copy(satir, 1, p3 - 1);
+                satir = Copy(satir, p3 + 1, Length(satir));
+
+                p4 = Pos('|', satir);
+
+                if (p4 > 0)
+                {
+                  basSaat = Copy(satir, 1, p4 - 1);
+                  bitSaat = Copy(satir, p4 + 1, Length(satir));
+
+                  VardiyaSatiriOlustur(index, shiftId, adSoyad, vardiya, basSaat, bitSaat);
+                  index = index + 1;
+                }
+              }
+            }
+          }
+        }
+
+        if (index == 0)
+        {
+          VardiyaSatiriOlustur(0, 'bos', 'Liste formatı okunamadı: ' + response, '-', '-', '-');
+        }
+      }
+    }
+
+  except
+    ShowMessage('Vardiya listesi alınamadı: ' + LastExceptionMessage);
+  }
+}
+
+
+void TarihSec(offsetGun: Integer; aktifBtn: TclProButton)
+{
+  GunButonlariniSifirla;
+  SetButtonActive(aktifBtn);
+
+  seciliTarih = FormatDateTime('yyyy-mm-dd', Now + offsetGun);
+  seciliGunAdi = aktifBtn.Text;
+
+  ListeyiYukle;
+}
+
+
+void GunSec1
+{
+  TarihSec(0, btnGun1);
+}
+
+
+void GunSec2
+{
+  TarihSec(1, btnGun2);
+}
+
+
+void GunSec3
+{
+  TarihSec(2, btnGun3);
+}
+
+
+void GunSec4
+{
+  TarihSec(3, btnGun4);
+}
+
+
+void GunSec5
+{
+  TarihSec(4, btnGun5);
+}
+
+
+void GunSec6
+{
+  TarihSec(5, btnGun6);
+}
+
+
+void GunSec7
+{
+  TarihSec(6, btnGun7);
+}
+
+
+void VardiyaSecSabah
+{
+  VardiyaButonlariniSifirla;
+  SetButtonActive(btnSabah);
+  seciliVardiya = 'Sabah';
+  seciliBaslangic = '08:00';
+  seciliBitis = '17:00';
+}
+
+
+void VardiyaSecAksam
+{
+  VardiyaButonlariniSifirla;
+  SetButtonActive(btnAksam);
+  seciliVardiya = 'Akşam';
+  seciliBaslangic = '16:00';
+  seciliBitis = '00:00';
+}
+
+
+void VardiyaSecGece
+{
+  VardiyaButonlariniSifirla;
+  SetButtonActive(btnGece);
+  seciliVardiya = 'Gece';
+  seciliBaslangic = '00:00';
+  seciliBitis = '08:00';
+}
+
+
+void VardiyaEkle
+var
+  url, body, response: String;
+{
+  try
+    url = SUPABASE_URL + '/rpc/assign_shift_by_email';
+
+    body = '{"p_email":"' + seciliPersonelEmail +
+           '","p_shift_date":"' + seciliTarih +
+           '","p_shift_type":"' + seciliVardiya +
+           '","p_start_time":"' + seciliBaslangic +
+           '","p_end_time":"' + seciliBitis +
+           '","p_department":"' + seciliPersonelDept + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+      ShowMessage('Vardiya işlemi tamamlandı.')
+    else
+      ShowMessage(response);
+
+    ListeyiYukle;
+
+  except
+    ShowMessage('Vardiya kaydı hatası: ' + LastExceptionMessage);
+  }
+}
+
+
+void VardiyaGuncelle
+var
+  url, body, response: String;
+{
+  try
+    url = SUPABASE_URL + '/rpc/update_shift_by_id';
+
+    body = '{"p_shift_id":"' + seciliShiftId +
+           '","p_shift_type":"' + seciliVardiya +
+           '","p_start_time":"' + seciliBaslangic +
+           '","p_end_time":"' + seciliBitis + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+      ShowMessage('Vardiya güncellendi.')
+    else
+      ShowMessage(response);
+
+    duzenlemeModu = False;
+    seciliShiftId = '';
+    btnKaydet.Text = '+ Vardiyaya Ekle';
+    btnKaydet.SetclProSettings(btnKaydet.clProSettings);
+
+    ListeyiYukle;
+
+  except
+    ShowMessage('Vardiya güncelleme hatası: ' + LastExceptionMessage);
+  }
+}
+
+
+void VardiyaKaydet
+{
+  if (seciliTarih < FormatDateTime('yyyy-mm-dd', Now))
+  {
+    ShowMessage('Geçmiş tarih için vardiya atanamaz.');
+    exit;
+  }
+
+  if (duzenlemeModu == True)
+  {
+    if (seciliShiftId == '')
+    {
+      ShowMessage('Düzenlenecek vardiya seçilmedi.');
+    }
+    else if (seciliVardiya == '')
+    {
+      ShowMessage('Yeni vardiya türünü seçmelisin.');
+    }
+    else
+    {
+      VardiyaGuncelle;
+    }
+  }
+  else
+  {
+    if (seciliPersonelEmail == '')
+    {
+      ShowMessage('Önce personel seçmelisin.');
+    }
+    else if (seciliTarih == '')
+    {
+      ShowMessage('Önce gün seçmelisin.');
+    }
+    else if (seciliVardiya == '')
+    {
+      ShowMessage('Önce vardiya seçmelisin.');
+    }
+    else
+    {
+      VardiyaEkle;
+    }
+  }
+}
+
+
+void VardiyaSil
+var
+  btn: TClProButton;
+  url, body, response: String;
+{
+  btn = TClProButton(vardiyaatama.clSender);
+
+  try
+    url = SUPABASE_URL + '/rpc/delete_shift_by_id';
+    body = '{"p_shift_id":"' + btn.TagString + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+      ShowMessage('Vardiya silindi.')
+    else
+      ShowMessage(response);
+
+    ListeyiYukle;
+
+  except
+    ShowMessage('Vardiya silme hatası: ' + LastExceptionMessage);
+  }
+}
+
+
+void VardiyaDuzenle
+var
+  btn: TClProButton;
+  data, shiftId, adSoyad, vardiya, basSaat, bitSaat: String;
+  p1, p2, p3, p4: Integer;
+{
+  btn = TClProButton(vardiyaatama.clSender);
+  data = btn.TagString;
+
+  p1 = Pos('|', data);
+  shiftId = Copy(data, 1, p1 - 1);
+  data = Copy(data, p1 + 1, Length(data));
+
+  p2 = Pos('|', data);
+  adSoyad = Copy(data, 1, p2 - 1);
+  data = Copy(data, p2 + 1, Length(data));
+
+  p3 = Pos('|', data);
+  vardiya = Copy(data, 1, p3 - 1);
+  data = Copy(data, p3 + 1, Length(data));
+
+  p4 = Pos('|', data);
+  basSaat = Copy(data, 1, p4 - 1);
+  bitSaat = Copy(data, p4 + 1, Length(data));
+
+  seciliShiftId = shiftId;
+  duzenlemeModu = True;
+
+  btnKaydet.Text = 'Vardiyayı Güncelle';
+  btnKaydet.SetclProSettings(btnKaydet.clProSettings);
+
+  ShowMessage(adSoyad + ' için yeni vardiya seçip Vardiyayı Güncelle butonuna bas.');
+}
+
+
+{
+  SupabaseAyarla;
+
+  seciliTarih = '';
+  seciliGunAdi = '';
+  seciliVardiya = '';
+  seciliBaslangic = '';
+  seciliBitis = '';
+
+  seciliPersonelAd = '';
+  seciliPersonelEmail = '';
+  seciliPersonelDept = '';
+
+  duzenlemeModu = False;
+  seciliShiftId = '';
+
+  personelListeNo = 0;
+  vardiyaListeNo = 0;
+
+  vardiyaatama = TCLForm.Create(nil);
+  vardiyaatama.SetFormColor('#F8FAFC', '', clGNone);
+
+  // ─── HEADER ───
+  pnlHeader = vardiyaatama.AddNewProPanel(vardiyaatama, 'pnlHeader');
+  pnlHeader.Align = alTop;
+  pnlHeader.Height = 64;
+  pnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlHeader.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlHeader.clProSettings.BorderWidth = 1;
+  pnlHeader.SetclProSettings(pnlHeader.clProSettings);
+
+  btnGeri = vardiyaatama.AddNewProButton(pnlHeader, 'btnGeri', '←');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 52;
+  btnGeri.Margins.Left = 12;
+  btnGeri.Margins.Top = 10;
+  btnGeri.Margins.Bottom = 10;
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.FontSize = 22;
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 10;
+  btnGeri.clProSettings.RoundWidth = 10;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  vardiyaatama.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+
+  lblBaslik = vardiyaatama.AddNewProLabel(pnlHeader, 'lblBaslik', 'Haftalık Vardiya Planı');
+  lblBaslik.Align = alClient;
+  lblBaslik.Margins.Left = 16;
+  lblBaslik.clProSettings.FontSize = 18;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  // ─── ANA SCROLL ALANI ───
+  scrollMain = vardiyaatama.AddNewVertScrollBox(vardiyaatama, 'scrollMain');
+  scrollMain.Align = alClient;
+  scrollMain.ShowScrollBars = True;
+
+  pnlContent = vardiyaatama.AddNewProPanel(scrollMain, 'pnlContent');
+  pnlContent.Align = alTop;
+  pnlContent.Height = 1220;
+  pnlContent.Margins.Left = 14;
+  pnlContent.Margins.Right = 14;
+  pnlContent.Margins.Top = 14;
+  pnlContent.Margins.Bottom = 24;
+  pnlContent.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlContent.SetclProSettings(pnlContent.clProSettings);
+
+  // ─── PERSONEL SEÇİMİ ───
+  lblPersonelBaslik = vardiyaatama.AddNewProLabel(pnlContent, 'lblPersonelBaslik', 'Personel Ara / Seç');
+  lblPersonelBaslik.Align = alTop;
+  lblPersonelBaslik.Height = 26;
+  lblPersonelBaslik.clProSettings.FontSize = 14;
+  lblPersonelBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblPersonelBaslik.SetclProSettings(lblPersonelBaslik.clProSettings);
+
+  pnlPersonelAlan = vardiyaatama.AddNewProPanel(pnlContent, 'pnlPersonelAlan');
+  pnlPersonelAlan.Align = alTop;
+  pnlPersonelAlan.Height = 225;
+  pnlPersonelAlan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlPersonelAlan.SetclProSettings(pnlPersonelAlan.clProSettings);
+
+  edtPersonelAra = vardiyaatama.AddNewProEdit(pnlPersonelAlan, 'edtPersonelAra', '');
+  edtPersonelAra.Align = alTop;
+  edtPersonelAra.Height = 42;
+  edtPersonelAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  edtPersonelAra.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E0');
+  edtPersonelAra.clProSettings.BorderWidth = 1;
+  edtPersonelAra.clProSettings.IsRound = True;
+  edtPersonelAra.clProSettings.RoundHeight = 8;
+  edtPersonelAra.clProSettings.RoundWidth = 8;
+  edtPersonelAra.SetclProSettings(edtPersonelAra.clProSettings);
+
+  btnPersonelAra = vardiyaatama.AddNewProButton(pnlPersonelAlan, 'btnPersonelAra', 'Personel Ara / Listele');
+  btnPersonelAra.Align = alTop;
+  btnPersonelAra.Height = 38;
+  btnPersonelAra.Margins.Top = 6;
+  btnPersonelAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnPersonelAra.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnPersonelAra.clProSettings.IsRound = True;
+  btnPersonelAra.clProSettings.RoundHeight = 8;
+  btnPersonelAra.clProSettings.RoundWidth = 8;
+  btnPersonelAra.SetclProSettings(btnPersonelAra.clProSettings);
+  vardiyaatama.AddNewEvent(btnPersonelAra, tbeOnClick, 'PersonelleriYukle');
+
+  lblSeciliPersonel = vardiyaatama.AddNewProLabel(pnlPersonelAlan, 'lblSeciliPersonel', 'Henüz personel seçilmedi.');
+  lblSeciliPersonel.Align = alTop;
+  lblSeciliPersonel.Height = 32;
+  lblSeciliPersonel.Margins.Top = 6;
+  lblSeciliPersonel.clProSettings.FontSize = 12;
+  lblSeciliPersonel.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblSeciliPersonel.clProSettings.TextSettings.WordWrap = True;
+  lblSeciliPersonel.SetclProSettings(lblSeciliPersonel.clProSettings);
+
+  scrollPersonel = vardiyaatama.AddNewVertScrollBox(pnlPersonelAlan, 'scrollPersonel0');
+  scrollPersonel.Align = alClient;
+  scrollPersonel.Margins.Top = 4;
+  scrollPersonel.ShowScrollBars = True;
+
+  // ─── GÜN SEÇİMİ ───
+  lblGunBaslik = vardiyaatama.AddNewProLabel(pnlContent, 'lblGunBaslik', 'Vardiya Tarihi');
+  lblGunBaslik.Align = alTop;
+  lblGunBaslik.Height = 28;
+  lblGunBaslik.Margins.Top = 10;
+  lblGunBaslik.clProSettings.FontSize = 14;
+  lblGunBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblGunBaslik.SetclProSettings(lblGunBaslik.clProSettings);
+
+  pnlGunler = vardiyaatama.AddNewProPanel(pnlContent, 'pnlGunler');
+  pnlGunler.Align = alTop;
+  pnlGunler.Height = 180;
+  pnlGunler.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlGunler.SetclProSettings(pnlGunler.clProSettings);
+
+  pnlGunRow1 = vardiyaatama.AddNewProPanel(pnlGunler, 'pnlGunRow1');
+  pnlGunRow1.Align = alTop;
+  pnlGunRow1.Height = 40;
+  pnlGunRow1.Margins.Top = 4;
+  pnlGunRow1.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlGunRow1.SetclProSettings(pnlGunRow1.clProSettings);
+
+  btnGun1 = vardiyaatama.AddNewProButton(pnlGunRow1, 'btnGun1', 'Bugün');
+  btnGun1.Align = alLeft;
+  btnGun1.Width = (vardiyaatama.clWidth / 2) - 32;
+  btnGun1.Margins.Right = 6;
+  vardiyaatama.AddNewEvent(btnGun1, tbeOnClick, 'GunSec1');
+
+  btnGun2 = vardiyaatama.AddNewProButton(pnlGunRow1, 'btnGun2', 'Yarın');
+  btnGun2.Align = alClient;
+  vardiyaatama.AddNewEvent(btnGun2, tbeOnClick, 'GunSec2');
+
+  pnlGunRow2 = vardiyaatama.AddNewProPanel(pnlGunler, 'pnlGunRow2');
+  pnlGunRow2.Align = alTop;
+  pnlGunRow2.Height = 40;
+  pnlGunRow2.Margins.Top = 6;
+  pnlGunRow2.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlGunRow2.SetclProSettings(pnlGunRow2.clProSettings);
+
+  btnGun3 = vardiyaatama.AddNewProButton(pnlGunRow2, 'btnGun3', 'Gün 3');
+  btnGun3.Align = alLeft;
+  btnGun3.Width = (vardiyaatama.clWidth / 2) - 32;
+  btnGun3.Margins.Right = 6;
+  vardiyaatama.AddNewEvent(btnGun3, tbeOnClick, 'GunSec3');
+
+  btnGun4 = vardiyaatama.AddNewProButton(pnlGunRow2, 'btnGun4', 'Gün 4');
+  btnGun4.Align = alClient;
+  vardiyaatama.AddNewEvent(btnGun4, tbeOnClick, 'GunSec4');
+
+  pnlGunRow3 = vardiyaatama.AddNewProPanel(pnlGunler, 'pnlGunRow3');
+  pnlGunRow3.Align = alTop;
+  pnlGunRow3.Height = 40;
+  pnlGunRow3.Margins.Top = 6;
+  pnlGunRow3.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlGunRow3.SetclProSettings(pnlGunRow3.clProSettings);
+
+  btnGun5 = vardiyaatama.AddNewProButton(pnlGunRow3, 'btnGun5', 'Gün 5');
+  btnGun5.Align = alLeft;
+  btnGun5.Width = (vardiyaatama.clWidth / 2) - 32;
+  btnGun5.Margins.Right = 6;
+  vardiyaatama.AddNewEvent(btnGun5, tbeOnClick, 'GunSec5');
+
+  btnGun6 = vardiyaatama.AddNewProButton(pnlGunRow3, 'btnGun6', 'Gün 6');
+  btnGun6.Align = alClient;
+  vardiyaatama.AddNewEvent(btnGun6, tbeOnClick, 'GunSec6');
+
+  pnlGunRow4 = vardiyaatama.AddNewProPanel(pnlGunler, 'pnlGunRow4');
+  pnlGunRow4.Align = alTop;
+  pnlGunRow4.Height = 40;
+  pnlGunRow4.Margins.Top = 6;
+  pnlGunRow4.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlGunRow4.SetclProSettings(pnlGunRow4.clProSettings);
+
+  btnGun7 = vardiyaatama.AddNewProButton(pnlGunRow4, 'btnGun7', 'Gün 7');
+  btnGun7.Align = alClient;
+  vardiyaatama.AddNewEvent(btnGun7, tbeOnClick, 'GunSec7');
+
+  // ─── VARDİYA SEÇİMİ ───
+  lblVardiyaBaslik = vardiyaatama.AddNewProLabel(pnlContent, 'lblVardiyaBaslik', 'Vardiya Seç');
+  lblVardiyaBaslik.Align = alTop;
+  lblVardiyaBaslik.Height = 30;
+  lblVardiyaBaslik.Margins.Top = 8;
+  lblVardiyaBaslik.clProSettings.FontSize = 14;
+  lblVardiyaBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblVardiyaBaslik.SetclProSettings(lblVardiyaBaslik.clProSettings);
+
+  pnlVardiya = vardiyaatama.AddNewProPanel(pnlContent, 'pnlVardiya');
+  pnlVardiya.Align = alTop;
+  pnlVardiya.Height = 140;
+  pnlVardiya.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  pnlVardiya.SetclProSettings(pnlVardiya.clProSettings);
+
+  btnSabah = vardiyaatama.AddNewProButton(pnlVardiya, 'btnSabah', 'Sabah');
+  btnSabah.Align = alTop;
+  btnSabah.Height = 38;
+  btnSabah.Margins.Top = 4;
+  vardiyaatama.AddNewEvent(btnSabah, tbeOnClick, 'VardiyaSecSabah');
+
+  btnAksam = vardiyaatama.AddNewProButton(pnlVardiya, 'btnAksam', 'Akşam');
+  btnAksam.Align = alTop;
+  btnAksam.Height = 38;
+  btnAksam.Margins.Top = 6;
+  vardiyaatama.AddNewEvent(btnAksam, tbeOnClick, 'VardiyaSecAksam');
+
+  btnGece = vardiyaatama.AddNewProButton(pnlVardiya, 'btnGece', 'Gece');
+  btnGece.Align = alTop;
+  btnGece.Height = 38;
+  btnGece.Margins.Top = 6;
+  vardiyaatama.AddNewEvent(btnGece, tbeOnClick, 'VardiyaSecGece');
+
+  // ─── KAYDET / YENİLE ───
+  btnKaydet = vardiyaatama.AddNewProButton(pnlContent, 'btnKaydet', '+ Vardiyaya Ekle');
+  btnKaydet.Align = alTop;
+  btnKaydet.Height = 52;
+  btnKaydet.Margins.Top = 12;
+  btnKaydet.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnKaydet.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnKaydet.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnKaydet.clProSettings.IsRound = True;
+  btnKaydet.clProSettings.RoundHeight = 10;
+  btnKaydet.clProSettings.RoundWidth = 10;
+  btnKaydet.SetclProSettings(btnKaydet.clProSettings);
+  vardiyaatama.AddNewEvent(btnKaydet, tbeOnClick, 'VardiyaKaydet');
+
+  btnYenile = vardiyaatama.AddNewProButton(pnlContent, 'btnYenile', 'Listeyi Yenile');
+  btnYenile.Align = alTop;
+  btnYenile.Height = 44;
+  btnYenile.Margins.Top = 10;
+  btnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnYenile.clProSettings.IsRound = True;
+  btnYenile.clProSettings.RoundHeight = 8;
+  btnYenile.clProSettings.RoundWidth = 8;
+  btnYenile.SetclProSettings(btnYenile.clProSettings);
+  vardiyaatama.AddNewEvent(btnYenile, tbeOnClick, 'ListeyiYukle');
+
+  // ─── SEÇİLİ GÜN LİSTESİ ───
+  lblListeBaslik = vardiyaatama.AddNewProLabel(pnlContent, 'lblListeBaslikAna', 'Seçili Gün Vardiyaları');
+  lblListeBaslik.Align = alTop;
+  lblListeBaslik.Height = 30;
+  lblListeBaslik.Margins.Top = 16;
+  lblListeBaslik.clProSettings.FontSize = 14;
+  lblListeBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblListeBaslik.SetclProSettings(lblListeBaslik.clProSettings);
+
+  pnlListeAlan = vardiyaatama.AddNewProPanel(pnlContent, 'pnlListeAlan');
+  pnlListeAlan.Align = alTop;
+  pnlListeAlan.Height = 340;
+  pnlListeAlan.Margins.Top = 8;
+  pnlListeAlan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlListeAlan.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlListeAlan.clProSettings.BorderWidth = 1;
+  pnlListeAlan.clProSettings.IsRound = True;
+  pnlListeAlan.clProSettings.RoundHeight = 12;
+  pnlListeAlan.clProSettings.RoundWidth = 12;
+  pnlListeAlan.SetclProSettings(pnlListeAlan.clProSettings);
+
+  lblListeBaslik = vardiyaatama.AddNewProLabel(pnlListeAlan, 'lblListeBaslik', 'Seçili gün listesi');
+  lblListeBaslik.Align = alTop;
+  lblListeBaslik.Height = 34;
+  lblListeBaslik.Margins.Left = 12;
+  lblListeBaslik.clProSettings.FontSize = 13;
+  lblListeBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblListeBaslik.clProSettings.FontVertAlign = palCenter;
+  lblListeBaslik.SetclProSettings(lblListeBaslik.clProSettings);
+
+  scrollVardiyalar = vardiyaatama.AddNewVertScrollBox(pnlListeAlan, 'scrollVardiyalar0');
+  scrollVardiyalar.Align = alClient;
+  scrollVardiyalar.ShowScrollBars = True;
+
+  vardiyaatama.AddNewProPanel(pnlContent, 'pnlBottomSpace').Align = alTop;
+
+  GunButonYazilariniHazirla;
+
+  SetButtonPassive(btnGun1);
+  SetButtonPassive(btnGun2);
+  SetButtonPassive(btnGun3);
+  SetButtonPassive(btnGun4);
+  SetButtonPassive(btnGun5);
+  SetButtonPassive(btnGun6);
+  SetButtonPassive(btnGun7);
+
+  SetButtonPassive(btnSabah);
+  SetButtonPassive(btnAksam);
+  SetButtonPassive(btnGece);
+
+  PersonelleriYukle;
+  VardiyaSecSabah;
+  GunSec1;
+
+  vardiyaatama.Run;
+}

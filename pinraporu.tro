@@ -1,0 +1,409 @@
+var
+  pinraporu: TCLForm;
+
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  pnlTop: TclProPanel;
+  lblBaslik: TclProLabel;
+  btnGeri, btnYenile: TclProButton;
+
+  scrollListe: TClVertScrollBox;
+
+  listeNo: Integer;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    sonuc = '';
+    Result = sonuc;
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+function ParcaAl(metin: String; ayirac: String; index: Integer): String;
+var
+  i, p: Integer;
+  kalan, parca: String;
+{
+  kalan = metin;
+  parca = '';
+
+  for i = 1 to index
+  {
+    p = Pos(ayirac, kalan);
+
+    if (p > 0)
+    {
+      parca = Copy(kalan, 1, p - 1);
+      kalan = Copy(kalan, p + Length(ayirac), Length(kalan));
+    }
+    else
+    {
+      parca = kalan;
+      kalan = '';
+    }
+  }
+
+  Result = parca;
+}
+
+
+void GoBack
+{
+  pinraporu.clHide;
+  Clomosy.RunUnit('yonetici');
+}
+
+
+void SayfayiYenile
+{
+  pinraporu.clHide;
+  Clomosy.RunUnit('pinraporu');
+}
+
+
+void BilgiKartOlustur(baslik: String; aciklama: String)
+var
+  pnlKart, pnlCizgi: TclProPanel;
+  lblBaslikInfo, lblAciklama: TclProLabel;
+{
+  listeNo = listeNo + 1;
+
+  pnlKart = pinraporu.AddNewProPanel(scrollListe, 'pnlBilgiKart_' + IntToStr(listeNo));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 135;
+  pnlKart.Margins.Left = 16;
+  pnlKart.Margins.Right = 16;
+  pnlKart.Margins.Top = 12;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  pnlCizgi = pinraporu.AddNewProPanel(pnlKart, 'pnlBilgiCizgi_' + IntToStr(listeNo));
+  pnlCizgi.Align = alLeft;
+  pnlCizgi.Width = 6;
+  pnlCizgi.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F59E0B');
+  pnlCizgi.SetclProSettings(pnlCizgi.clProSettings);
+
+  lblBaslikInfo = pinraporu.AddNewProLabel(pnlKart, 'lblBilgiBaslik_' + IntToStr(listeNo), baslik);
+  lblBaslikInfo.Align = alTop;
+  lblBaslikInfo.Height = 35;
+  lblBaslikInfo.Margins.Left = 18;
+  lblBaslikInfo.Margins.Right = 14;
+  lblBaslikInfo.Margins.Top = 14;
+  lblBaslikInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslikInfo.clProSettings.FontSize = 15;
+  lblBaslikInfo.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslikInfo.SetclProSettings(lblBaslikInfo.clProSettings);
+
+  lblAciklama = pinraporu.AddNewProLabel(pnlKart, 'lblBilgiAciklama_' + IntToStr(listeNo), aciklama);
+  lblAciklama.Align = alClient;
+  lblAciklama.Margins.Left = 18;
+  lblAciklama.Margins.Right = 14;
+  lblAciklama.Margins.Bottom = 12;
+  lblAciklama.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblAciklama.clProSettings.FontSize = 12;
+  lblAciklama.clProSettings.TextSettings.WordWrap = True;
+  lblAciklama.SetclProSettings(lblAciklama.clProSettings);
+}
+
+
+void PinKartOlustur(adSoyad: String; pinKod: String; islem: String; tarih: String; mesaj: String)
+var
+  pnlKart, pnlCizgi: TclProPanel;
+  lblUst, lblPin, lblMesaj, lblTarih: TclProLabel;
+  renk: String;
+{
+  listeNo = listeNo + 1;
+
+  if (islem == 'Giriş')
+    renk = '#16A34A'
+  else if (islem == 'Çıkış')
+    renk = '#2563EB'
+  else if (islem == 'Başarısız')
+    renk = '#DC2626'
+  else
+    renk = '#F59E0B';
+
+  pnlKart = pinraporu.AddNewProPanel(scrollListe, 'pnlPinKart_' + IntToStr(listeNo));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 145;
+  pnlKart.Margins.Left = 16;
+  pnlKart.Margins.Right = 16;
+  pnlKart.Margins.Top = 12;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  pnlCizgi = pinraporu.AddNewProPanel(pnlKart, 'pnlCizgi_' + IntToStr(listeNo));
+  pnlCizgi.Align = alLeft;
+  pnlCizgi.Width = 6;
+  pnlCizgi.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(renk);
+  pnlCizgi.SetclProSettings(pnlCizgi.clProSettings);
+
+  lblUst = pinraporu.AddNewProLabel(pnlKart, 'lblUst_' + IntToStr(listeNo), adSoyad + ' | ' + islem);
+  lblUst.Align = alTop;
+  lblUst.Height = 32;
+  lblUst.Margins.Left = 18;
+  lblUst.Margins.Right = 14;
+  lblUst.Margins.Top = 12;
+  lblUst.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblUst.clProSettings.FontSize = 14;
+  lblUst.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblUst.SetclProSettings(lblUst.clProSettings);
+
+  lblPin = pinraporu.AddNewProLabel(pnlKart, 'lblPin_' + IntToStr(listeNo), 'PIN: ' + pinKod);
+  lblPin.Align = alTop;
+  lblPin.Height = 24;
+  lblPin.Margins.Left = 18;
+  lblPin.Margins.Right = 14;
+  lblPin.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblPin.clProSettings.FontSize = 12;
+  lblPin.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblPin.SetclProSettings(lblPin.clProSettings);
+
+  lblTarih = pinraporu.AddNewProLabel(pnlKart, 'lblTarih_' + IntToStr(listeNo), 'Tarih: ' + tarih);
+  lblTarih.Align = alTop;
+  lblTarih.Height = 24;
+  lblTarih.Margins.Left = 18;
+  lblTarih.Margins.Right = 14;
+  lblTarih.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblTarih.clProSettings.FontSize = 12;
+  lblTarih.SetclProSettings(lblTarih.clProSettings);
+
+  lblMesaj = pinraporu.AddNewProLabel(pnlKart, 'lblMesaj_' + IntToStr(listeNo), mesaj);
+  lblMesaj.Align = alClient;
+  lblMesaj.Margins.Left = 18;
+  lblMesaj.Margins.Right = 14;
+  lblMesaj.Margins.Bottom = 10;
+  lblMesaj.clProSettings.FontColor = clAlphaColor.clHexToColor('#334155');
+  lblMesaj.clProSettings.FontSize = 12;
+  lblMesaj.clProSettings.TextSettings.WordWrap = True;
+  lblMesaj.SetclProSettings(lblMesaj.clProSettings);
+}
+
+
+void ListeyiYukle
+var
+  url, response, kalan, kayit: String;
+  adSoyad, pinKod, islem, tarih, mesaj: String;
+  bitis: Integer;
+{
+  listeNo = 0;
+
+  try
+    url = SUPABASE_URL + '/rpc/list_pin_action_logs_simple';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = '{}';
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+    {
+      BilgiKartOlustur('PIN geçmişi bulunamadı', 'Henüz PIN ile giriş veya çıkış işlemi yapılmamış.');
+      exit;
+    }
+
+    if (response == 'null')
+    {
+      BilgiKartOlustur('PIN geçmişi bulunamadı', 'Henüz PIN ile giriş veya çıkış işlemi yapılmamış.');
+      exit;
+    }
+
+    if (response == '[]')
+    {
+      BilgiKartOlustur('PIN geçmişi bulunamadı', 'Henüz PIN ile giriş veya çıkış işlemi yapılmamış.');
+      exit;
+    }
+
+    if (response == '0')
+    {
+      BilgiKartOlustur('PIN geçmişi bulunamadı', 'RPC boş değer döndürdü. SQL tarafında list_pin_action_logs_simple sonucunu kontrol et.');
+      exit;
+    }
+
+    if (Copy(response, 1, 1) == '{')
+    {
+      BilgiKartOlustur('Supabase hatası', response);
+      exit;
+    }
+
+    kalan = response;
+
+    while (Length(kalan) > 0)
+    {
+      bitis = Pos('¤', kalan);
+
+      if (bitis > 0)
+      {
+        kayit = Copy(kalan, 1, bitis - 1);
+        kalan = Copy(kalan, bitis + 1, Length(kalan));
+      }
+      else
+      {
+        kayit = kalan;
+        kalan = '';
+      }
+
+      adSoyad = ParcaAl(kayit, '§', 1);
+      pinKod  = ParcaAl(kayit, '§', 2);
+      islem   = ParcaAl(kayit, '§', 3);
+      tarih   = ParcaAl(kayit, '§', 4);
+      mesaj   = ParcaAl(kayit, '§', 5);
+
+      if (adSoyad == '')
+        adSoyad = 'Bilinmeyen';
+
+      if (pinKod == '')
+        pinKod = '-';
+
+      if (islem == '')
+        islem = '-';
+
+      if (tarih == '')
+        tarih = '-';
+
+      if (mesaj == '')
+        mesaj = '-';
+
+      PinKartOlustur(adSoyad, pinKod, islem, tarih, mesaj);
+    }
+
+  except
+    BilgiKartOlustur('Liste alınamadı', 'PIN geçmişi yüklenirken hata oluştu: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void BtnPress
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(pinraporu.clSender);
+  btn.Position.Y = btn.Position.Y + 2;
+}
+
+
+void BtnRelease
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(pinraporu.clSender);
+  btn.Position.Y = btn.Position.Y - 2;
+}
+
+
+{
+  SupabaseAyarla;
+
+  pinraporu = TCLForm.Create(nil);
+  pinraporu.SetFormColor('#F8FAFC', '', clGNone);
+
+  pnlTop = pinraporu.AddNewProPanel(pinraporu, 'pnlTop');
+  pnlTop.Align = alTop;
+  pnlTop.Height = 72;
+  pnlTop.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlTop.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlTop.clProSettings.BorderWidth = 1;
+  pnlTop.SetclProSettings(pnlTop.clProSettings);
+
+  btnGeri = pinraporu.AddNewProButton(pnlTop, 'btnGeri', 'Geri');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 110;
+  btnGeri.Margins.Left = 10;
+  btnGeri.Margins.Top = 12;
+  btnGeri.Margins.Bottom = 12;
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 8;
+  btnGeri.clProSettings.RoundWidth = 8;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  pinraporu.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+  pinraporu.AddNewEvent(btnGeri, tbeOnMouseDown, 'BtnPress');
+  pinraporu.AddNewEvent(btnGeri, tbeOnMouseUp, 'BtnRelease');
+
+  lblBaslik = pinraporu.AddNewProLabel(pnlTop, 'lblBaslik', 'PIN Geçmişi');
+  lblBaslik.Align = alClient;
+  lblBaslik.clProSettings.FontSize = 18;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  btnYenile = pinraporu.AddNewProButton(pnlTop, 'btnYenile', 'Yenile');
+  btnYenile.Align = alRight;
+  btnYenile.Width = 110;
+  btnYenile.Margins.Right = 10;
+  btnYenile.Margins.Top = 12;
+  btnYenile.Margins.Bottom = 12;
+  btnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnYenile.clProSettings.IsRound = True;
+  btnYenile.clProSettings.RoundHeight = 8;
+  btnYenile.clProSettings.RoundWidth = 8;
+  btnYenile.SetclProSettings(btnYenile.clProSettings);
+  pinraporu.AddNewEvent(btnYenile, tbeOnClick, 'SayfayiYenile');
+  pinraporu.AddNewEvent(btnYenile, tbeOnMouseDown, 'BtnPress');
+  pinraporu.AddNewEvent(btnYenile, tbeOnMouseUp, 'BtnRelease');
+
+  scrollListe = pinraporu.AddNewVertScrollBox(pinraporu, 'scrollListe');
+  scrollListe.Align = alClient;
+  scrollListe.ShowScrollBars = True;
+
+  ListeyiYukle;
+
+  pinraporu.AddNewProPanel(scrollListe, 'pnlBottomSpace').Align = alTop;
+
+  pinraporu.Run;
+}

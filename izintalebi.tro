@@ -1,0 +1,465 @@
+var
+  izintalebi: TCLForm;
+
+  // Supabase
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  // Kullanıcı bilgileri
+  EMPLOYEE_TOKEN: String;
+  CURRENT_USER_NAME: String;
+
+  // Tasarım
+  pnlTopBar: TclProPanel;
+  btnGeri: TclProButton;
+  lblBaslik: TclProLabel;
+
+  scrollBody: TClVertScrollBox;
+
+  pnlInfo: TclProPanel;
+  lblInfoBaslik, lblInfoAlt: TclProLabel;
+
+  pnlForm: TclProPanel;
+  lblTur, lblBaslangic, lblBitis, lblNeden: TclProLabel;
+  cmbIzinTur: TclComboBox;
+  edtBaslangic: TClProDateEdit;
+  edtBitis: TClProDateEdit;
+  memoNeden: TclMemo;
+
+  btnGonder: TclProButton;
+  btnTemizle: TclProButton;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    sonuc = '';
+    Result = sonuc;
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+function GetProfileField(fieldName: String): String;
+var
+  url, body, response: String;
+{
+  try
+    url = SUPABASE_URL + '/rpc/get_profile_field';
+    body = '{"p_field":"' + fieldName + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    Result = response;
+
+  except
+    Result = '';
+  }
+}
+
+
+void CalisanBilgileriYukle
+{
+  CURRENT_USER_NAME = GetProfileField('full_name');
+  EMPLOYEE_TOKEN = GetProfileField('qr_token');
+
+  if (CURRENT_USER_NAME <> '')
+  {
+    lblInfoBaslik.Text = 'İzin Talebi Oluştur';
+    lblInfoAlt.Text = CURRENT_USER_NAME + ' için izin talebi oluşturuluyor.';
+    lblInfoBaslik.SetclProSettings(lblInfoBaslik.clProSettings);
+    lblInfoAlt.SetclProSettings(lblInfoAlt.clProSettings);
+  }
+
+  if (EMPLOYEE_TOKEN == '')
+  {
+    ShowMessage('Çalışan QR token bilgisi alınamadı.');
+  }
+
+  if (EMPLOYEE_TOKEN == '-')
+  {
+    EMPLOYEE_TOKEN = '';
+    ShowMessage('Çalışan QR token bilgisi alınamadı.');
+  }
+
+  if (EMPLOYEE_TOKEN == 'null')
+  {
+    EMPLOYEE_TOKEN = '';
+    ShowMessage('Çalışan QR token bilgisi null geldi.');
+  }
+}
+
+
+void GoBack
+{
+  izintalebi.clHide;
+  Clomosy.RunUnit('calisan');
+}
+
+
+void FormuTemizle
+{
+  cmbIzinTur.ItemIndex = -1;
+  memoNeden.Text = '';
+}
+
+
+void IzinTalebiGonder
+var
+  url, body, response: String;
+  tur, baslangic, bitis, neden: String;
+{
+  tur = cmbIzinTur.Text;
+  baslangic = FormatDateTime('yyyy-mm-dd', edtBaslangic.Date);
+  bitis = FormatDateTime('yyyy-mm-dd', edtBitis.Date);
+  neden = memoNeden.Text;
+
+  if (EMPLOYEE_TOKEN == '')
+  {
+    ShowMessage('Çalışan bilgisi alınamadı. Lütfen tekrar giriş yapınız.');
+    exit;
+  }
+
+  if (tur == '')
+  {
+    ShowMessage('Lütfen izin türü seçiniz.');
+    exit;
+  }
+
+  if (bitis < baslangic)
+  {
+    ShowMessage('Bitiş tarihi başlangıç tarihinden küçük olamaz.');
+    exit;
+  }
+
+  if (neden == '')
+  {
+    ShowMessage('Lütfen izin açıklaması giriniz.');
+    exit;
+  }
+
+  url = SUPABASE_URL + '/rpc/submit_leave_request';
+
+  body = '{"p_employee_token":"' + EMPLOYEE_TOKEN + '",'
+       + '"p_leave_type":"' + tur + '",'
+       + '"p_start_date":"' + baslangic + '",'
+       + '"p_end_date":"' + bitis + '",'
+       + '"p_reason":"' + neden + '"}';
+
+  try
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+      ShowMessage('İzin talebiniz yöneticiye iletildi.')
+    else
+      ShowMessage(response);
+
+    FormuTemizle;
+
+  except
+    ShowMessage('İzin talebi gönderilemedi: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void BtnPress
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(izintalebi.clSender);
+  btn.Position.Y = btn.Position.Y + 2;
+}
+
+
+void BtnRelease
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(izintalebi.clSender);
+  btn.Position.Y = btn.Position.Y - 2;
+}
+
+
+{
+  SupabaseAyarla;
+
+  EMPLOYEE_TOKEN = '';
+  CURRENT_USER_NAME = '';
+
+  izintalebi = TCLForm.Create(Self);
+  izintalebi.SetFormColor('#F8FAFC', '', clGNone);
+
+  // ─── ÜST BAR ───
+  pnlTopBar = izintalebi.AddNewProPanel(izintalebi, 'pnlTopBar');
+  pnlTopBar.Align = alTop;
+  pnlTopBar.Height = 65;
+  pnlTopBar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlTopBar.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlTopBar.clProSettings.BorderWidth = 1;
+  pnlTopBar.SetclProSettings(pnlTopBar.clProSettings);
+
+  btnGeri = izintalebi.AddNewProButton(pnlTopBar, 'btnGeri', '< Geri');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 75;
+  btnGeri.Margins.Left = 10;
+  btnGeri.Margins.Top = 10;
+  btnGeri.Margins.Bottom = 10;
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  btnGeri.clProSettings.BorderWidth = 0;
+  btnGeri.clProSettings.FontSize = 12;
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 10;
+  btnGeri.clProSettings.RoundWidth = 10;
+  btnGeri.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  izintalebi.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+
+  lblBaslik = izintalebi.AddNewProLabel(pnlTopBar, 'lblBaslik', 'İzin Talebi');
+  lblBaslik.Align = alClient;
+  lblBaslik.Margins.Right = 75;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.FontSize = 17;
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  // ─── SCROLL BODY ───
+  scrollBody = izintalebi.AddNewVertScrollBox(izintalebi, 'scrollBody');
+  scrollBody.Align = alClient;
+  scrollBody.ShowScrollBars = False;
+
+  // ─── INFO PANEL ───
+  pnlInfo = izintalebi.AddNewProPanel(scrollBody, 'pnlInfo');
+  pnlInfo.Align = alTop;
+  pnlInfo.Height = 100;
+  pnlInfo.Margins.Left = 16;
+  pnlInfo.Margins.Right = 16;
+  pnlInfo.Margins.Top = 16;
+  pnlInfo.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  pnlInfo.clProSettings.BorderColor = clAlphaColor.clHexToColor('#BFDBFE');
+  pnlInfo.clProSettings.BorderWidth = 1;
+  pnlInfo.clProSettings.IsRound = True;
+  pnlInfo.clProSettings.RoundHeight = 16;
+  pnlInfo.clProSettings.RoundWidth = 16;
+  pnlInfo.SetclProSettings(pnlInfo.clProSettings);
+
+  lblInfoBaslik = izintalebi.AddNewProLabel(pnlInfo, 'lblInfoBaslik', 'İzin Talebi Oluştur');
+  lblInfoBaslik.Align = alTop;
+  lblInfoBaslik.Height = 36;
+  lblInfoBaslik.Margins.Left = 18;
+  lblInfoBaslik.Margins.Top = 15;
+  lblInfoBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblInfoBaslik.clProSettings.FontSize = 18;
+  lblInfoBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblInfoBaslik.SetclProSettings(lblInfoBaslik.clProSettings);
+
+  lblInfoAlt = izintalebi.AddNewProLabel(pnlInfo, 'lblInfoAlt', 'Vardiya istemediğiniz tarih aralığını seçiniz.');
+  lblInfoAlt.Align = alTop;
+  lblInfoAlt.Height = 28;
+  lblInfoAlt.Margins.Left = 18;
+  lblInfoAlt.Margins.Right = 18;
+  lblInfoAlt.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  lblInfoAlt.clProSettings.FontSize = 12;
+  lblInfoAlt.SetclProSettings(lblInfoAlt.clProSettings);
+
+  // ─── FORM PANEL ───
+  pnlForm = izintalebi.AddNewProPanel(scrollBody, 'pnlForm');
+  pnlForm.Align = alTop;
+  pnlForm.Height = 440;
+  pnlForm.Margins.Left = 16;
+  pnlForm.Margins.Right = 16;
+  pnlForm.Margins.Top = 14;
+  pnlForm.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlForm.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlForm.clProSettings.BorderWidth = 1;
+  pnlForm.clProSettings.IsRound = True;
+  pnlForm.clProSettings.RoundHeight = 16;
+  pnlForm.clProSettings.RoundWidth = 16;
+  pnlForm.SetclProSettings(pnlForm.clProSettings);
+
+  // İzin Türü
+  lblTur = izintalebi.AddNewProLabel(pnlForm, 'lblTur', 'İzin Türü');
+  lblTur.Align = alTop;
+  lblTur.Height = 24;
+  lblTur.Margins.Left = 20;
+  lblTur.Margins.Right = 20;
+  lblTur.Margins.Top = 18;
+  lblTur.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblTur.clProSettings.FontSize = 12;
+  lblTur.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblTur.SetclProSettings(lblTur.clProSettings);
+
+  cmbIzinTur = izintalebi.AddNewComboBox(pnlForm, 'cmbIzinTur');
+  cmbIzinTur.Align = alTop;
+  cmbIzinTur.Height = 42;
+  cmbIzinTur.Margins.Left = 20;
+  cmbIzinTur.Margins.Right = 20;
+  cmbIzinTur.Margins.Top = 4;
+  cmbIzinTur.AddItem('Yıllık İzin', '1');
+  cmbIzinTur.AddItem('Mazeret İzni', '2');
+  cmbIzinTur.AddItem('Sağlık İzni', '3');
+  cmbIzinTur.AddItem('Ücretsiz İzin', '4');
+  cmbIzinTur.AddItem('Vardiya İstemiyorum', '5');
+
+  // Başlangıç Tarihi
+  lblBaslangic = izintalebi.AddNewProLabel(pnlForm, 'lblBaslangic', 'Başlangıç Tarihi');
+  lblBaslangic.Align = alTop;
+  lblBaslangic.Height = 24;
+  lblBaslangic.Margins.Left = 20;
+  lblBaslangic.Margins.Right = 20;
+  lblBaslangic.Margins.Top = 14;
+  lblBaslangic.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblBaslangic.clProSettings.FontSize = 12;
+  lblBaslangic.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslangic.SetclProSettings(lblBaslangic.clProSettings);
+
+  edtBaslangic = izintalebi.AddNewProDateEdit(pnlForm, 'edtBaslangic');
+  edtBaslangic.Align = alTop;
+  edtBaslangic.Height = 42;
+  edtBaslangic.Margins.Left = 20;
+  edtBaslangic.Margins.Right = 20;
+  edtBaslangic.Margins.Top = 4;
+
+  // Bitiş Tarihi
+  lblBitis = izintalebi.AddNewProLabel(pnlForm, 'lblBitis', 'Bitiş Tarihi');
+  lblBitis.Align = alTop;
+  lblBitis.Height = 24;
+  lblBitis.Margins.Left = 20;
+  lblBitis.Margins.Right = 20;
+  lblBitis.Margins.Top = 14;
+  lblBitis.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblBitis.clProSettings.FontSize = 12;
+  lblBitis.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBitis.SetclProSettings(lblBitis.clProSettings);
+
+  edtBitis = izintalebi.AddNewProDateEdit(pnlForm, 'edtBitis');
+  edtBitis.Align = alTop;
+  edtBitis.Height = 42;
+  edtBitis.Margins.Left = 20;
+  edtBitis.Margins.Right = 20;
+  edtBitis.Margins.Top = 4;
+
+  // Açıklama
+  lblNeden = izintalebi.AddNewProLabel(pnlForm, 'lblNeden', 'Açıklama');
+  lblNeden.Align = alTop;
+  lblNeden.Height = 24;
+  lblNeden.Margins.Left = 20;
+  lblNeden.Margins.Right = 20;
+  lblNeden.Margins.Top = 14;
+  lblNeden.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblNeden.clProSettings.FontSize = 12;
+  lblNeden.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblNeden.SetclProSettings(lblNeden.clProSettings);
+
+  memoNeden = izintalebi.AddNewMemo(pnlForm, 'memoNeden', '');
+  memoNeden.Align = alTop;
+  memoNeden.Height = 85;
+  memoNeden.Margins.Left = 20;
+  memoNeden.Margins.Right = 20;
+  memoNeden.Margins.Top = 4;
+  memoNeden.StyledSettings = ssFamily;
+  memoNeden.TextSettings.WordWrap = True;
+
+  // Gönder Butonu
+  btnGonder = izintalebi.AddNewProButton(pnlForm, 'btnGonder', 'Talebi Gönder');
+  btnGonder.Align = alTop;
+  btnGonder.Height = 48;
+  btnGonder.Margins.Left = 20;
+  btnGonder.Margins.Right = 20;
+  btnGonder.Margins.Top = 18;
+  btnGonder.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnGonder.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGonder.clProSettings.FontSize = 14;
+  btnGonder.clProSettings.FontHorzAlign = palCenter;
+  btnGonder.clProSettings.FontVertAlign = palCenter;
+  btnGonder.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnGonder.clProSettings.IsRound = True;
+  btnGonder.clProSettings.RoundHeight = 10;
+  btnGonder.clProSettings.RoundWidth = 10;
+  btnGonder.SetclProSettings(btnGonder.clProSettings);
+  izintalebi.AddNewEvent(btnGonder, tbeOnClick, 'IzinTalebiGonder');
+  izintalebi.AddNewEvent(btnGonder, tbeOnMouseDown, 'BtnPress');
+  izintalebi.AddNewEvent(btnGonder, tbeOnMouseUp, 'BtnRelease');
+
+  // Temizle Butonu
+  btnTemizle = izintalebi.AddNewProButton(pnlForm, 'btnTemizle', 'Temizle');
+  btnTemizle.Align = alTop;
+  btnTemizle.Height = 42;
+  btnTemizle.Margins.Left = 20;
+  btnTemizle.Margins.Right = 20;
+  btnTemizle.Margins.Top = 8;
+  btnTemizle.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  btnTemizle.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  btnTemizle.clProSettings.FontSize = 13;
+  btnTemizle.clProSettings.FontHorzAlign = palCenter;
+  btnTemizle.clProSettings.FontVertAlign = palCenter;
+  btnTemizle.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnTemizle.clProSettings.IsRound = True;
+  btnTemizle.clProSettings.RoundHeight = 10;
+  btnTemizle.clProSettings.RoundWidth = 10;
+  btnTemizle.SetclProSettings(btnTemizle.clProSettings);
+  izintalebi.AddNewEvent(btnTemizle, tbeOnClick, 'FormuTemizle');
+
+  // En altta boşluk
+  izintalebi.AddNewProPanel(scrollBody, 'pnlBottomSpace').Align = alTop;
+
+  // Giriş yapan çalışan bilgilerini al
+  CalisanBilgileriYukle;
+
+  izintalebi.Run;
+}

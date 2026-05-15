@@ -1,0 +1,395 @@
+var
+  eksikliste: TCLForm;
+
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  pnlTop: TclProPanel;
+  lblBaslik: TclProLabel;
+  btnGeri, btnYenile: TclProButton;
+
+  scrollListe: TClVertScrollBox;
+
+  listeNo: Integer;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    sonuc = '';
+    Result = sonuc;
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+function ParcaAl(metin: String; ayirac: String; index: Integer): String;
+var
+  i, p: Integer;
+  kalan, parca: String;
+{
+  kalan = metin;
+  parca = '';
+
+  for i = 1 to index
+  {
+    p = Pos(ayirac, kalan);
+
+    if (p > 0)
+    {
+      parca = Copy(kalan, 1, p - 1);
+      kalan = Copy(kalan, p + Length(ayirac), Length(kalan));
+    }
+    else
+    {
+      parca = kalan;
+      kalan = '';
+    }
+  }
+
+  Result = parca;
+}
+
+
+void GoBack
+{
+  eksikliste.clHide;
+  Clomosy.RunUnit('yonetici');
+}
+
+
+void SayfayiYenile
+{
+  eksikliste.clHide;
+  Clomosy.RunUnit('eksikliste');
+}
+
+
+void EksikKartOlustur(idText: String; adSoyad: String; email: String; departman: String; pozisyon: String)
+var
+  pnlKart, pnlDurum: TclProPanel;
+  lblAd, lblEmail, lblDepartman, lblDurum: TclProLabel;
+{
+  listeNo = listeNo + 1;
+
+  pnlKart = eksikliste.AddNewProPanel(scrollListe, 'pnlEksikKart_' + IntToStr(listeNo));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 115;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 12;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  pnlDurum = eksikliste.AddNewProPanel(pnlKart, 'pnlDurum_' + IntToStr(listeNo));
+  pnlDurum.Align = alLeft;
+  pnlDurum.Width = 6;
+  pnlDurum.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EF4444');
+  pnlDurum.SetclProSettings(pnlDurum.clProSettings);
+
+  lblAd = eksikliste.AddNewProLabel(pnlKart, 'lblAd_' + IntToStr(listeNo), adSoyad);
+  lblAd.Align = alTop;
+  lblAd.Height = 28;
+  lblAd.Margins.Left = 18;
+  lblAd.Margins.Right = 15;
+  lblAd.Margins.Top = 12;
+  lblAd.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblAd.clProSettings.FontSize = 15;
+  lblAd.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAd.SetclProSettings(lblAd.clProSettings);
+
+  lblEmail = eksikliste.AddNewProLabel(pnlKart, 'lblEmail_' + IntToStr(listeNo), email);
+  lblEmail.Align = alTop;
+  lblEmail.Height = 22;
+  lblEmail.Margins.Left = 18;
+  lblEmail.Margins.Right = 15;
+  lblEmail.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblEmail.clProSettings.FontSize = 11;
+  lblEmail.SetclProSettings(lblEmail.clProSettings);
+
+  lblDepartman = eksikliste.AddNewProLabel(pnlKart, 'lblDepartman_' + IntToStr(listeNo), departman + ' | ' + pozisyon);
+  lblDepartman.Align = alTop;
+  lblDepartman.Height = 24;
+  lblDepartman.Margins.Left = 18;
+  lblDepartman.Margins.Right = 15;
+  lblDepartman.Margins.Top = 4;
+  lblDepartman.clProSettings.FontColor = clAlphaColor.clHexToColor('#334155');
+  lblDepartman.clProSettings.FontSize = 12;
+  lblDepartman.SetclProSettings(lblDepartman.clProSettings);
+
+  lblDurum = eksikliste.AddNewProLabel(pnlKart, 'lblDurum_' + IntToStr(listeNo), 'Bugün giriş yapmadı / izinli değil');
+  lblDurum.Align = alBottom;
+  lblDurum.Height = 25;
+  lblDurum.Margins.Left = 18;
+  lblDurum.Margins.Right = 15;
+  lblDurum.Margins.Bottom = 8;
+  lblDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#EF4444');
+  lblDurum.clProSettings.FontSize = 11;
+  lblDurum.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblDurum.SetclProSettings(lblDurum.clProSettings);
+}
+
+
+void BilgiKartOlustur(baslik: String; aciklama: String)
+var
+  pnlKart: TclProPanel;
+  lblBaslikInfo, lblAciklama: TclProLabel;
+{
+  listeNo = listeNo + 1;
+
+  pnlKart = eksikliste.AddNewProPanel(scrollListe, 'pnlBilgiKart_' + IntToStr(listeNo));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 125;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 14;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  lblBaslikInfo = eksikliste.AddNewProLabel(pnlKart, 'lblBaslikInfo_' + IntToStr(listeNo), baslik);
+  lblBaslikInfo.Align = alTop;
+  lblBaslikInfo.Height = 35;
+  lblBaslikInfo.Margins.Left = 16;
+  lblBaslikInfo.Margins.Right = 16;
+  lblBaslikInfo.Margins.Top = 16;
+  lblBaslikInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblBaslikInfo.clProSettings.FontSize = 16;
+  lblBaslikInfo.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslikInfo.SetclProSettings(lblBaslikInfo.clProSettings);
+
+  lblAciklama = eksikliste.AddNewProLabel(pnlKart, 'lblAciklama_' + IntToStr(listeNo), aciklama);
+  lblAciklama.Align = alTop;
+  lblAciklama.Height = 45;
+  lblAciklama.Margins.Left = 16;
+  lblAciklama.Margins.Right = 16;
+  lblAciklama.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblAciklama.clProSettings.FontSize = 12;
+  lblAciklama.clProSettings.TextSettings.WordWrap = True;
+  lblAciklama.SetclProSettings(lblAciklama.clProSettings);
+}
+
+
+void ListeyiDoldur
+var
+  url, response: String;
+  kalan, kayit: String;
+  idText, adSoyad, email, departman, pozisyon: String;
+  bitis: Integer;
+{
+  listeNo = 0;
+
+  try
+    url = SUPABASE_URL + '/rpc/list_missing_users_today';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = '{}';
+    RestClient.Execute;
+
+    response = RestClient.Response;
+    response = SupabaseTextTemizle(response);
+
+    if (response == '')
+    {
+      BilgiKartOlustur(
+        'Eksik personel yok',
+        'Bugün giriş yapmayan ve izinli olmayan personel bulunmuyor.'
+      );
+      exit;
+    }
+
+    if (response == 'null')
+    {
+      BilgiKartOlustur(
+        'Eksik personel yok',
+        'Bugün giriş yapmayan ve izinli olmayan personel bulunmuyor.'
+      );
+      exit;
+    }
+
+    if (response == '[]')
+    {
+      BilgiKartOlustur(
+        'Eksik personel yok',
+        'Bugün giriş yapmayan ve izinli olmayan personel bulunmuyor.'
+      );
+      exit;
+    }
+
+    if (Copy(response, 1, 1) == '{')
+    {
+      BilgiKartOlustur(
+        'Supabase hatası',
+        response
+      );
+      exit;
+    }
+
+    kalan = response;
+
+    while (Length(kalan) > 0)
+    {
+      bitis = Pos(';;', kalan);
+
+      if (bitis > 0)
+      {
+        kayit = Copy(kalan, 1, bitis - 1);
+        kalan = Copy(kalan, bitis + 2, Length(kalan));
+      }
+      else
+      {
+        kayit = kalan;
+        kalan = '';
+      }
+
+      idText   = ParcaAl(kayit, '|', 1);
+      adSoyad  = ParcaAl(kayit, '|', 2);
+      email    = ParcaAl(kayit, '|', 3);
+      departman = ParcaAl(kayit, '|', 4);
+      pozisyon = ParcaAl(kayit, '|', 5);
+
+      EksikKartOlustur(
+        idText,
+        adSoyad,
+        email,
+        departman,
+        pozisyon
+      );
+    }
+
+  except
+    BilgiKartOlustur(
+      'Liste alınamadı',
+      'Eksik personel listesi yüklenirken hata oluştu: ' + LastExceptionMessage
+    );
+  }
+}
+
+
+void BtnPress
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(eksikliste.clSender);
+  btn.Position.Y = btn.Position.Y + 2;
+}
+
+
+void BtnRelease
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(eksikliste.clSender);
+  btn.Position.Y = btn.Position.Y - 2;
+}
+
+
+{
+  SupabaseAyarla;
+
+  eksikliste = TCLForm.Create(nil);
+  eksikliste.SetFormColor('#F8FAFC', '', clGNone);
+
+  pnlTop = eksikliste.AddNewProPanel(eksikliste, 'pnlTop');
+  pnlTop.Align = alTop;
+  pnlTop.Height = 70;
+  pnlTop.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlTop.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlTop.clProSettings.BorderWidth = 1;
+  pnlTop.SetclProSettings(pnlTop.clProSettings);
+
+  btnGeri = eksikliste.AddNewProButton(pnlTop, 'btnGeri', 'Geri');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 90;
+  btnGeri.Margins.Left = 10;
+  btnGeri.Margins.Top = 12;
+  btnGeri.Margins.Bottom = 12;
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 8;
+  btnGeri.clProSettings.RoundWidth = 8;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  eksikliste.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+  eksikliste.AddNewEvent(btnGeri, tbeOnMouseDown, 'BtnPress');
+  eksikliste.AddNewEvent(btnGeri, tbeOnMouseUp, 'BtnRelease');
+
+  lblBaslik = eksikliste.AddNewProLabel(pnlTop, 'lblBaslik', 'Eksik Personel Listesi');
+  lblBaslik.Align = alClient;
+  lblBaslik.clProSettings.FontSize = 17;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  btnYenile = eksikliste.AddNewProButton(pnlTop, 'btnYenile', 'Yenile');
+  btnYenile.Align = alRight;
+  btnYenile.Width = 90;
+  btnYenile.Margins.Right = 10;
+  btnYenile.Margins.Top = 12;
+  btnYenile.Margins.Bottom = 12;
+  btnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnYenile.clProSettings.IsRound = True;
+  btnYenile.clProSettings.RoundHeight = 8;
+  btnYenile.clProSettings.RoundWidth = 8;
+  btnYenile.SetclProSettings(btnYenile.clProSettings);
+  eksikliste.AddNewEvent(btnYenile, tbeOnClick, 'SayfayiYenile');
+  eksikliste.AddNewEvent(btnYenile, tbeOnMouseDown, 'BtnPress');
+  eksikliste.AddNewEvent(btnYenile, tbeOnMouseUp, 'BtnRelease');
+
+  scrollListe = eksikliste.AddNewVertScrollBox(eksikliste, 'scrollListe');
+  scrollListe.Align = alClient;
+  scrollListe.ShowScrollBars = False;
+
+  ListeyiDoldur;
+
+  eksikliste.AddNewProPanel(scrollListe, 'pnlBottomSpace').Align = alTop;
+
+  eksikliste.Run;
+}

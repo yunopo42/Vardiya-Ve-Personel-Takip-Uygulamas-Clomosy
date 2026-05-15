@@ -1,0 +1,349 @@
+var
+  formRapor: TCLForm;
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  pnlTop: TclProPanel;
+  lblBaslik: TclProLabel;
+  btnGeri, btnYenile: TclProButton;
+  scrollListe: TClVertScrollBox;
+  listeNo: Integer;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    Result = '';
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+function ParcaAl(metin: String; ayirac: String; index: Integer): String;
+var
+  i, p: Integer;
+  kalan, parca: String;
+{
+  kalan = metin;
+  parca = '';
+
+  for i = 1 to index
+  {
+    p = Pos(ayirac, kalan);
+
+    if (p > 0)
+    {
+      parca = Copy(kalan, 1, p - 1);
+      kalan = Copy(kalan, p + Length(ayirac), Length(kalan));
+    }
+    else
+    {
+      parca = kalan;
+      kalan = '';
+    }
+  }
+
+  Result = parca;
+}
+
+
+void GoBack
+{
+  formRapor.clHide;
+  Clomosy.RunUnit('yonetici');
+}
+
+
+void SayfayiYenile
+{
+  formRapor.clHide;
+  Clomosy.RunUnit('giriscikisraporu');
+}
+
+
+void BilgiKartOlustur(metin: String)
+var
+  pnlKart: TclProPanel;
+  lblInfo: TclProLabel;
+{
+  pnlKart = formRapor.AddNewProPanel(scrollListe, 'pnlInfo');
+  pnlKart.Align = alTop;
+  pnlKart.Height = 100;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 14;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  lblInfo = formRapor.AddNewProLabel(pnlKart, 'lblInfo', metin);
+  lblInfo.Align = alClient;
+  lblInfo.Margins.Left = 16;
+  lblInfo.Margins.Right = 16;
+  lblInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblInfo.clProSettings.FontSize = 13;
+  lblInfo.clProSettings.FontVertAlign = palCenter;
+  lblInfo.clProSettings.TextSettings.WordWrap = True;
+  lblInfo.SetclProSettings(lblInfo.clProSettings);
+}
+
+
+void KartOlustur(index: Integer; kayit: String)
+var
+  pnlKart, pnlSol: TclProPanel;
+  lblAd, lblBilgi, lblDurum: TclProLabel;
+  userId, ad, departman, pozisyon, vardiya, giris, cikis, durum, mola: String;
+{
+  userId = ParcaAl(kayit, '|', 1);
+  ad = ParcaAl(kayit, '|', 2);
+  departman = ParcaAl(kayit, '|', 3);
+  pozisyon = ParcaAl(kayit, '|', 4);
+  vardiya = ParcaAl(kayit, '|', 5);
+  giris = ParcaAl(kayit, '|', 6);
+  cikis = ParcaAl(kayit, '|', 7);
+  durum = ParcaAl(kayit, '|', 8);
+  mola = ParcaAl(kayit, '|', 9);
+
+  pnlKart = formRapor.AddNewProPanel(scrollListe, 'pnlKart_' + IntToStr(index));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 118;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 10;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  pnlSol = formRapor.AddNewProPanel(pnlKart, 'pnlSol_' + IntToStr(index));
+  pnlSol.Align = alLeft;
+  pnlSol.Width = 6;
+
+  if (durum == 'Mesaide')
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#10B981')
+  else if (durum == 'Tamamlandı')
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3B82F6')
+  else if (durum == 'İzinli')
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F59E0B')
+  else if (durum == 'Eksik')
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EF4444')
+  else
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#94A3B8');
+
+  pnlSol.SetclProSettings(pnlSol.clProSettings);
+
+  lblAd = formRapor.AddNewProLabel(pnlKart, 'lblAd_' + IntToStr(index), ad);
+  lblAd.Align = alTop;
+  lblAd.Height = 28;
+  lblAd.Margins.Left = 16;
+  lblAd.Margins.Right = 12;
+  lblAd.Margins.Top = 10;
+  lblAd.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblAd.clProSettings.FontSize = 15;
+  lblAd.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAd.SetclProSettings(lblAd.clProSettings);
+
+  lblBilgi = formRapor.AddNewProLabel(pnlKart, 'lblBilgi_' + IntToStr(index), departman + ' | ' + pozisyon + #13#10 + 'Vardiya: ' + vardiya + ' | Giriş: ' + giris + ' | Çıkış: ' + cikis);
+  lblBilgi.Align = alTop;
+  lblBilgi.Height = 45;
+  lblBilgi.Margins.Left = 16;
+  lblBilgi.Margins.Right = 12;
+  lblBilgi.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblBilgi.clProSettings.FontSize = 11;
+  lblBilgi.clProSettings.TextSettings.WordWrap = True;
+  lblBilgi.SetclProSettings(lblBilgi.clProSettings);
+
+  lblDurum = formRapor.AddNewProLabel(pnlKart, 'lblDurum_' + IntToStr(index), 'Durum: ' + durum + ' | Mola: ' + mola + ' dk');
+  lblDurum.Align = alBottom;
+  lblDurum.Height = 25;
+  lblDurum.Margins.Left = 16;
+  lblDurum.Margins.Right = 12;
+  lblDurum.Margins.Bottom = 8;
+  lblDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblDurum.clProSettings.FontSize = 12;
+  lblDurum.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblDurum.SetclProSettings(lblDurum.clProSettings);
+}
+
+
+
+void ListeyiYukle
+var
+  url, response, kalan, kayit: String;
+  bitis, index: Integer;
+{
+  listeNo = 0;
+
+  try
+    url = SUPABASE_URL + '/rpc/list_today_attendance_report';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+    RestClient.Body = '{}';
+    RestClient.Execute;
+
+    response = SupabaseTextTemizle(RestClient.Response);
+
+    if (response == '')
+    {
+      BilgiKartOlustur('Listelenecek kayıt bulunamadı.');
+      exit;
+    }
+
+    if (response == 'null')
+    {
+      BilgiKartOlustur('Listelenecek kayıt bulunamadı.');
+      exit;
+    }
+
+    kalan = response;
+    index = 0;
+
+    while (Length(kalan) > 0)
+    {
+      bitis = Pos(';;', kalan);
+
+      if (bitis > 0)
+      {
+        kayit = Copy(kalan, 1, bitis - 1);
+        kalan = Copy(kalan, bitis + 2, Length(kalan));
+      }
+      else
+      {
+        kayit = kalan;
+        kalan = '';
+      }
+
+      KartOlustur(index, kayit);
+      index = index + 1;
+    }
+
+  except
+    BilgiKartOlustur('Rapor alınamadı: ' + LastExceptionMessage);
+  }
+}
+
+
+void BtnPress
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(formRapor.clSender);
+  btn.Position.Y = btn.Position.Y + 2;
+}
+
+
+void BtnRelease
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(formRapor.clSender);
+  btn.Position.Y = btn.Position.Y - 2;
+}
+
+
+{
+  SupabaseAyarla;
+
+  formRapor = TCLForm.Create(nil);
+  formRapor.SetFormColor('#F8FAFC', '', clGNone);
+
+  pnlTop = formRapor.AddNewProPanel(formRapor, 'pnlTop');
+  pnlTop.Align = alTop;
+  pnlTop.Height = 70;
+  pnlTop.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlTop.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlTop.clProSettings.BorderWidth = 1;
+  pnlTop.SetclProSettings(pnlTop.clProSettings);
+
+  btnGeri = formRapor.AddNewProButton(pnlTop, 'btnGeri', 'Geri');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 90;
+  btnGeri.Margins.Left = 10;
+  btnGeri.Margins.Top = 12;
+  btnGeri.Margins.Bottom = 12;
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 8;
+  btnGeri.clProSettings.RoundWidth = 8;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  formRapor.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+  formRapor.AddNewEvent(btnGeri, tbeOnMouseDown, 'BtnPress');
+  formRapor.AddNewEvent(btnGeri, tbeOnMouseUp, 'BtnRelease');
+
+  lblBaslik = formRapor.AddNewProLabel(pnlTop, 'lblBaslik', 'Giriş / Çıkış Raporu');
+  lblBaslik.Align = alClient;
+  lblBaslik.clProSettings.FontSize = 17;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  btnYenile = formRapor.AddNewProButton(pnlTop, 'btnYenile', 'Yenile');
+  btnYenile.Align = alRight;
+  btnYenile.Width = 90;
+  btnYenile.Margins.Right = 10;
+  btnYenile.Margins.Top = 12;
+  btnYenile.Margins.Bottom = 12;
+  btnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnYenile.clProSettings.IsRound = True;
+  btnYenile.clProSettings.RoundHeight = 8;
+  btnYenile.clProSettings.RoundWidth = 8;
+  btnYenile.SetclProSettings(btnYenile.clProSettings);
+  formRapor.AddNewEvent(btnYenile, tbeOnClick, 'SayfayiYenile');
+  formRapor.AddNewEvent(btnYenile, tbeOnMouseDown, 'BtnPress');
+  formRapor.AddNewEvent(btnYenile, tbeOnMouseUp, 'BtnRelease');
+
+  scrollListe = formRapor.AddNewVertScrollBox(formRapor, 'scrollListe');
+  scrollListe.Align = alClient;
+  scrollListe.ShowScrollBars = True;
+
+  ListeyiYukle;
+
+  formRapor.AddNewProPanel(scrollListe, 'pnlBottomSpace').Align = alTop;
+
+  formRapor.Run;
+}
+

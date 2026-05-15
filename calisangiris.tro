@@ -1,0 +1,344 @@
+var
+  calisangiris: TCLForm;
+
+  // Supabase
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  // Layout
+  scrollMain: TClVertScrollBox;
+  pnlContent, pnlLogoAlan, pnlFormAlan, pnlDemoAlan, pnlFooter: TclProPanel;
+
+  btnPersonel, btnYenikayit: TClProButton;
+  lblBaslik, lblAltBaslik, lblSystem, lblDemoTitle, lblDemoInfo: TClProLabel;
+  lblEmpId, lblAccessCode: TClProLabel;
+  edtEmpId, edtAccessCode: TClProEdit;
+  imgLogo: TClProImage;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+void SetCurrentUser(email: String)
+var
+  url, body: String;
+{
+  try
+    url = SUPABASE_URL + '/rpc/set_current_user';
+    body = '{"p_email":"' + email + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+  except
+    ShowMessage('Oturum bilgisi kaydedilemedi.');
+  }
+}
+
+
+void GoToPersonel
+var
+  email, sifre, url, response: String;
+{
+  email = edtEmpId.Text;
+  sifre = edtAccessCode.Text;
+
+  if (email == '')
+  {
+    ShowMessage('E-posta boş bırakılamaz.');
+  }
+  else if (sifre == '')
+  {
+    ShowMessage('Şifre boş bırakılamaz.');
+  }
+  else
+  {
+    try
+      url = SUPABASE_URL + '/users?email=eq.' + email + '&password=eq.' + sifre + '&role=eq.user&select=id,full_name,email,role';
+
+      RestClient = TclRest.Create;
+      RestClient.BaseURL = url;
+      RestClient.Accept = 'application/json';
+      RestClient.ContentType = 'application/json';
+      RestClient.Method = rmGET;
+
+      RestClient.AddHeader('apikey', SUPABASE_KEY);
+      RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+      RestClient.Execute;
+
+      response = RestClient.Response;
+
+      if (response == '[]')
+      {
+        ShowMessage('E-posta veya şifre hatalı.');
+      }
+      else
+      {
+        ShowMessage('Giriş başarılı.');
+        SetCurrentUser(email);
+        calisangiris.clHide;
+        Clomosy.RunUnit('calisan');
+      }
+
+    except
+      ShowMessage('Giriş bağlantı hatası: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+    }
+  }
+}
+
+
+void GoToYenikayit
+{
+  calisangiris.clHide;
+  Clomosy.RunUnit('yenikayit');
+}
+
+
+void BtnPress
+var 
+  btn: TClProButton;
+{
+  btn = TClProButton(calisangiris.clSender);
+  btn.Position.Y = btn.Position.Y + 4;
+}
+
+
+void BtnRelease
+var 
+  btn: TClProButton;
+{
+  btn = TClProButton(calisangiris.clSender);
+  btn.Position.Y = btn.Position.Y - 4;
+}
+
+
+{
+  SupabaseAyarla;
+
+  calisangiris = TCLForm.Create(nil);
+  calisangiris.SetFormColor('#F4F7F6', '#E0E7EE', clGVertical);
+
+  // ── FOOTER SABİT ALAN ───────────────────────────────
+  pnlFooter = calisangiris.AddNewProPanel(calisangiris, 'pnlFooter');
+  pnlFooter.Align = alBottom;
+  pnlFooter.Height = 36;
+  pnlFooter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E0E7EE');
+  pnlFooter.SetclProSettings(pnlFooter.clProSettings);
+
+  lblSystem = calisangiris.AddNewProLabel(pnlFooter, 'lblSystem', 'SYSTEM ONLINE');
+  lblSystem.Align = alClient;
+  lblSystem.clProSettings.FontColor = clAlphaColor.clHexToColor('#38A169');
+  lblSystem.clProSettings.FontSize = 11;
+  lblSystem.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblSystem.clProSettings.FontHorzAlign = palCenter;
+  lblSystem.clProSettings.FontVertAlign = palCenter;
+  lblSystem.SetclProSettings(lblSystem.clProSettings);
+
+  // ── ANA KAYDIRILABİLİR ALAN ─────────────────────────
+  scrollMain = calisangiris.AddNewVertScrollBox(calisangiris, 'scrollMain');
+  scrollMain.Align = alClient;
+  scrollMain.ShowScrollBars = True;
+
+  pnlContent = calisangiris.AddNewProPanel(scrollMain, 'pnlContent');
+  pnlContent.Align = alTop;
+  pnlContent.Height = 700;
+  pnlContent.Margins.Left = 24;
+  pnlContent.Margins.Right = 24;
+  pnlContent.Margins.Top = 18;
+  pnlContent.Margins.Bottom = 20;
+  pnlContent.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F4F7F6');
+  pnlContent.SetclProSettings(pnlContent.clProSettings);
+
+  // ── LOGO + BAŞLIK ALANI ─────────────────────────────
+  pnlLogoAlan = calisangiris.AddNewProPanel(pnlContent, 'pnlLogoAlan');
+  pnlLogoAlan.Align = alTop;
+  pnlLogoAlan.Height = 210;
+  pnlLogoAlan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F4F7F6');
+  pnlLogoAlan.SetclProSettings(pnlLogoAlan.clProSettings);
+
+  imgLogo = calisangiris.AddNewProImage(pnlLogoAlan, 'imgLogo');
+  imgLogo.Align = alTop;
+  imgLogo.Height = 82;
+  imgLogo.Margins.Top = 20;
+  imgLogo.Margins.Left = 0;
+  imgLogo.Margins.Right = 0;
+  imgLogo.clProSettings.PictureSource = 'https://autogasmarket.by/upload/iblock/0ea/iud0crej7fcyw1mqszuq7z9o97mckj0v.png';
+  imgLogo.clProSettings.PictureAutoFit = True;
+  imgLogo.SetclProSettings(imgLogo.clProSettings);
+
+  lblBaslik = calisangiris.AddNewProLabel(pnlLogoAlan, 'lblBaslik', 'ATİKER A.Ş.');
+  lblBaslik.Align = alTop;
+  lblBaslik.Height = 42;
+  lblBaslik.Margins.Top = 18;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0D1B3E');
+  lblBaslik.clProSettings.FontSize = 24;
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  lblAltBaslik = calisangiris.AddNewProLabel(pnlLogoAlan, 'lblAltBaslik', 'Vardiya Takip Sistemi');
+  lblAltBaslik.Align = alTop;
+  lblAltBaslik.Height = 26;
+  lblAltBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#6B7A99');
+  lblAltBaslik.clProSettings.FontSize = 13;
+  lblAltBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblAltBaslik.clProSettings.FontVertAlign = palCenter;
+  lblAltBaslik.SetclProSettings(lblAltBaslik.clProSettings);
+
+  // ── FORM ALANI ──────────────────────────────────────
+  pnlFormAlan = calisangiris.AddNewProPanel(pnlContent, 'pnlFormAlan');
+  pnlFormAlan.Align = alTop;
+  pnlFormAlan.Height = 310;
+  pnlFormAlan.Margins.Left = 20;
+  pnlFormAlan.Margins.Right = 20;
+  pnlFormAlan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F4F7F6');
+  pnlFormAlan.SetclProSettings(pnlFormAlan.clProSettings);
+
+  lblEmpId = calisangiris.AddNewProLabel(pnlFormAlan, 'lblEmpId', 'Personel E-Posta');
+  lblEmpId.Align = alTop;
+  lblEmpId.Height = 24;
+  lblEmpId.clProSettings.FontColor = clAlphaColor.clHexToColor('#2D3748');
+  lblEmpId.clProSettings.FontSize = 12;
+  lblEmpId.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblEmpId.clProSettings.FontVertAlign = palCenter;
+  lblEmpId.SetclProSettings(lblEmpId.clProSettings);
+
+  edtEmpId = calisangiris.AddNewProEdit(pnlFormAlan, 'edtEmpId', '');
+  edtEmpId.Align = alTop;
+  edtEmpId.Height = 48;
+  edtEmpId.Margins.Top = 4;
+  edtEmpId.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  edtEmpId.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E0');
+  edtEmpId.clProSettings.BorderWidth = 2;
+  edtEmpId.clProSettings.IsRound = True;
+  edtEmpId.clProSettings.RoundHeight = 8;
+  edtEmpId.clProSettings.RoundWidth = 8;
+  edtEmpId.SetclProSettings(edtEmpId.clProSettings);
+
+  lblAccessCode = calisangiris.AddNewProLabel(pnlFormAlan, 'lblAccessCode', 'Şifre');
+  lblAccessCode.Align = alTop;
+  lblAccessCode.Height = 24;
+  lblAccessCode.Margins.Top = 18;
+  lblAccessCode.clProSettings.FontColor = clAlphaColor.clHexToColor('#2D3748');
+  lblAccessCode.clProSettings.FontSize = 12;
+  lblAccessCode.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAccessCode.clProSettings.FontVertAlign = palCenter;
+  lblAccessCode.SetclProSettings(lblAccessCode.clProSettings);
+
+  edtAccessCode = calisangiris.AddNewProEdit(pnlFormAlan, 'edtAccessCode', '');
+  edtAccessCode.Align = alTop;
+  edtAccessCode.Height = 48;
+  edtAccessCode.Margins.Top = 4;
+  edtAccessCode.Password = True;
+  edtAccessCode.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  edtAccessCode.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E0');
+  edtAccessCode.clProSettings.BorderWidth = 2;
+  edtAccessCode.clProSettings.IsRound = True;
+  edtAccessCode.clProSettings.RoundHeight = 8;
+  edtAccessCode.clProSettings.RoundWidth = 8;
+  edtAccessCode.SetclProSettings(edtAccessCode.clProSettings);
+
+  btnPersonel = calisangiris.AddNewProButton(pnlFormAlan, 'btnPersonel', 'Giriş Yap');
+  btnPersonel.Align = alTop;
+  btnPersonel.Height = 52;
+  btnPersonel.Margins.Top = 28;
+  btnPersonel.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnPersonel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnPersonel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnPersonel.clProSettings.FontSize = 15;
+  btnPersonel.clProSettings.FontHorzAlign = palCenter;
+  btnPersonel.clProSettings.FontVertAlign = palCenter;
+  btnPersonel.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnPersonel.clProSettings.IsTransparent = False;
+  btnPersonel.clProSettings.IsFill = True;
+  btnPersonel.clProSettings.IsRound = True;
+  btnPersonel.clProSettings.RoundHeight = 10;
+  btnPersonel.clProSettings.RoundWidth = 10;
+  btnPersonel.clProSettings.BorderWidth = 0;
+  btnPersonel.SetclProSettings(btnPersonel.clProSettings);
+  
+  calisangiris.AddNewEvent(btnPersonel, tbeOnClick, 'GoToPersonel');
+  calisangiris.AddNewEvent(btnPersonel, tbeOnMouseDown, 'BtnPress');
+  calisangiris.AddNewEvent(btnPersonel, tbeOnMouseUp, 'BtnRelease');
+
+  btnYenikayit = calisangiris.AddNewProButton(pnlFormAlan, 'btnYenikayit', 'Hesabın yok mu? Yeni Kayıt Oluştur');
+  btnYenikayit.Align = alTop;
+  btnYenikayit.Height = 46;
+  btnYenikayit.Margins.Top = 16;
+  btnYenikayit.clProSettings.FontColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnYenikayit.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E0E7EE');
+  btnYenikayit.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E0');
+  btnYenikayit.clProSettings.BorderWidth = 2;
+  btnYenikayit.clProSettings.FontSize = 13;
+  btnYenikayit.clProSettings.FontHorzAlign = palCenter;
+  btnYenikayit.clProSettings.FontVertAlign = palCenter;
+  btnYenikayit.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnYenikayit.clProSettings.IsTransparent = False;
+  btnYenikayit.clProSettings.IsFill = True;
+  btnYenikayit.clProSettings.IsRound = True; 
+  btnYenikayit.clProSettings.RoundHeight = 10;
+  btnYenikayit.clProSettings.RoundWidth = 10;
+  btnYenikayit.SetclProSettings(btnYenikayit.clProSettings);
+  
+  calisangiris.AddNewEvent(btnYenikayit, tbeOnClick, 'GoToYenikayit');
+  calisangiris.AddNewEvent(btnYenikayit, tbeOnMouseDown, 'BtnPress');
+  calisangiris.AddNewEvent(btnYenikayit, tbeOnMouseUp, 'BtnRelease');
+
+  // ── DEMO BİLGİ KARTI ────────────────────────────────
+  pnlDemoAlan = calisangiris.AddNewProPanel(pnlContent, 'pnlDemoAlan');
+  pnlDemoAlan.Align = alTop;
+  pnlDemoAlan.Height = 96;
+  pnlDemoAlan.Margins.Left = 20;
+  pnlDemoAlan.Margins.Right = 20;
+  pnlDemoAlan.Margins.Top = 8;
+  pnlDemoAlan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EFF6FF');
+  pnlDemoAlan.clProSettings.BorderColor = clAlphaColor.clHexToColor('#BFDBFE');
+  pnlDemoAlan.clProSettings.BorderWidth = 1;
+  pnlDemoAlan.clProSettings.IsRound = True;
+  pnlDemoAlan.clProSettings.RoundHeight = 12;
+  pnlDemoAlan.clProSettings.RoundWidth = 12;
+  pnlDemoAlan.SetclProSettings(pnlDemoAlan.clProSettings);
+
+  lblDemoTitle = calisangiris.AddNewProLabel(pnlDemoAlan, 'lblDemoTitle', 'Demo Personel Girişi');
+  lblDemoTitle.Align = alTop;
+  lblDemoTitle.Height = 28;
+  lblDemoTitle.Margins.Left = 14;
+  lblDemoTitle.Margins.Right = 14;
+  lblDemoTitle.Margins.Top = 8;
+  lblDemoTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblDemoTitle.clProSettings.FontSize = 13;
+  lblDemoTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblDemoTitle.clProSettings.FontHorzAlign = palCenter;
+  lblDemoTitle.clProSettings.FontVertAlign = palCenter;
+  lblDemoTitle.SetclProSettings(lblDemoTitle.clProSettings);
+
+  lblDemoInfo = calisangiris.AddNewProLabel(pnlDemoAlan, 'lblDemoInfo', 'E-posta: ahmet@test.com   |   Şifre: 123456');
+  lblDemoInfo.Align = alClient;
+  lblDemoInfo.Margins.Left = 14;
+  lblDemoInfo.Margins.Right = 14;
+  lblDemoInfo.Margins.Bottom = 8;
+  lblDemoInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblDemoInfo.clProSettings.FontSize = 12;
+  lblDemoInfo.clProSettings.FontHorzAlign = palCenter;
+  lblDemoInfo.clProSettings.FontVertAlign = palCenter;
+  lblDemoInfo.clProSettings.TextSettings.WordWrap = True;
+  lblDemoInfo.SetclProSettings(lblDemoInfo.clProSettings);
+
+  calisangiris.Run;
+}

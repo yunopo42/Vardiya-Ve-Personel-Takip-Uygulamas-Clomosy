@@ -1,0 +1,372 @@
+var
+  profil        : TCLForm;
+
+  pnlHeader     : TclProPanel;
+  imgAvatar     : TclProImage;
+  lblAdSoyad    : TclProLabel;
+  lblRolBadge   : TclProLabel;
+
+  scrollBody    : TclVertScrollBox;
+  pnlBody       : TclProPanel;
+  
+  // Değerleri tutan değişkenlerimiz
+  lblValID      : TclProLabel;
+  lblValDept    : TclProLabel;
+  lblValPozis   : TclProLabel;
+  lblValRol     : TclProLabel;
+  lblValEposta  : TclProLabel;
+  lblValTelefon : TclProLabel;
+  lblValVardiya : TclProLabel;
+  lblValGiris   : TclProLabel;
+  lblValDurum   : TclProLabel;
+
+  // Durum satırı için özel bileşenler
+  pnlDurum       : TclProPanel;
+  lblSecDurum    : TclProLabel;
+  rectDurumNokta : TclProPanel;
+
+  sep1, sep2, sep3, sep4,
+  sep5, sep6, sep7, sep8 : TclProPanel;
+
+  pnlFooter     : TclProPanel;
+  lblFooterNot  : TclProLabel;
+  
+  btnGeri: TClProButton;
+  
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+// YENİ: Başlığı sola, değeri sağa hizalayan modern satır fonksiyonu
+function SatirOlustur(parent : TclProPanel; ad: String; baslik: String): TclProLabel;
+var
+  pnlSatir  : TclProPanel;
+  lblBaslik : TclProLabel;
+  lblDeger  : TclProLabel;
+{
+  pnlSatir = profil.AddNewProPanel(parent, ad + '_pnl');
+  pnlSatir.Align = alMostTop;
+  pnlSatir.Height = 45;
+  
+  // Sol taraftaki başlık kısmı (Örn: "Departman Adı:")
+  lblBaslik = profil.AddNewProLabel(pnlSatir, ad + '_baslik', baslik);
+  lblBaslik.Align = alLeft;
+  lblBaslik.Width = 120;
+  lblBaslik.Margins.Left = 16;
+  lblBaslik.clProSettings.FontSize = 12;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#888888');
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+  
+  // Sağ taraftaki değer kısmı
+  lblDeger = profil.AddNewProLabel(pnlSatir, ad + '_deger', '–');
+  lblDeger.Align = alClient;
+  lblDeger.Margins.Right = 16;
+  lblDeger.clProSettings.FontSize = 14;
+  lblDeger.clProSettings.FontColor = clAlphaColor.clHexToColor('#1A1A1A');
+  lblDeger.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblDeger.clProSettings.FontVertAlign = palCenter;
+  lblDeger.SetclProSettings(lblDeger.clProSettings);
+  
+  Result = lblDeger;
+}
+
+function SepOlustur(parent : TclProPanel; ad : String) : TclProPanel;
+var
+  sepNesne : TclProPanel;
+{
+  sepNesne = profil.AddNewProPanel(parent, ad);
+  sepNesne.Align             = alMostTop;
+  sepNesne.Height            = 1;
+  sepNesne.Margins.Left      = 16;
+  sepNesne.Margins.Right     = 16;
+  sepNesne.Margins.Top       = 0;
+  sepNesne.Margins.Bottom    = 0;
+  sepNesne.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E8E8E8');
+  sepNesne.SetclProSettings(sepNesne.clProSettings);
+  Result = sepNesne;
+}
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+function GetProfileField(fieldName: String): String;
+var
+  url, body, response: String;
+{
+  try
+    url = SUPABASE_URL + '/rpc/get_profile_field';
+    body = '{"p_field":"' + fieldName + '"}';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = RestClient.Response;
+
+    if (Length(response) > 1)
+    {
+      response = Copy(response, 2, Length(response) - 2);
+    }
+
+    Result = response;
+
+  except
+    Result = '-';
+  }
+}
+
+void GoBack
+var
+  rol: String;
+{
+  rol = GetProfileField('role');
+
+  profil.clHide;
+
+  if (rol == 'admin')
+  {
+    Clomosy.RunUnit('yonetici');
+  }
+  else
+  {
+    Clomosy.RunUnit('calisan');
+  }
+}
+
+void ProfilYukle;
+var
+  adSoyad, email, rol, dept, pozisyon, durum, userId: String;
+{
+  adSoyad = GetProfileField('full_name');
+  email = GetProfileField('email');
+  rol = GetProfileField('role');
+  dept = GetProfileField('department');
+  pozisyon = GetProfileField('position');
+  durum = GetProfileField('status');
+  userId = GetProfileField('id');
+
+  lblAdSoyad.Text = adSoyad;
+
+  if (rol == 'admin')
+  {
+    lblRolBadge.Text = 'Yönetici';
+    lblValRol.Text = 'Yönetici';
+  }
+  else
+  {
+    lblRolBadge.Text = 'Personel';
+    lblValRol.Text = 'Personel';
+  }
+
+  imgAvatar.clProSettings.PictureSource =
+    'https://static.vecteezy.com/system/resources/thumbnails/007/749/454/small/man-and-woman-profile-avatar-in-a-flat-style-male-and-female-face-icon-vector.jpg';
+  imgAvatar.SetclProSettings(imgAvatar.clProSettings);
+
+  lblValID.Text      = userId;
+  lblValDept.Text    = dept;
+  lblValPozis.Text   = pozisyon;
+  lblValEposta.Text  = email;
+  lblValTelefon.Text = '-';
+  lblValVardiya.Text = '08:00 / 17:00';
+  lblValGiris.Text   = '-';
+
+  if (durum == 'active')
+  {
+    lblValDurum.Text = 'Aktif';
+    lblValDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#3B6D11');
+    rectDurumNokta.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3B6D11');
+  }
+  else
+  {
+    lblValDurum.Text = durum;
+    lblValDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#EF4444');
+    rectDurumNokta.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EF4444');
+  }
+
+  lblAdSoyad.SetclProSettings(lblAdSoyad.clProSettings);
+  lblRolBadge.SetclProSettings(lblRolBadge.clProSettings);
+  lblValID.SetclProSettings(lblValID.clProSettings);
+  lblValDept.SetclProSettings(lblValDept.clProSettings);
+  lblValPozis.SetclProSettings(lblValPozis.clProSettings);
+  lblValRol.SetclProSettings(lblValRol.clProSettings);
+  lblValEposta.SetclProSettings(lblValEposta.clProSettings);
+  lblValTelefon.SetclProSettings(lblValTelefon.clProSettings);
+  lblValVardiya.SetclProSettings(lblValVardiya.clProSettings);
+  lblValGiris.SetclProSettings(lblValGiris.clProSettings);
+  lblValDurum.SetclProSettings(lblValDurum.clProSettings);
+  rectDurumNokta.SetclProSettings(rectDurumNokta.clProSettings);
+}
+
+{
+  SupabaseAyarla;
+
+  profil = TCLForm.Create(Self);
+  profil.SetFormColor('#F5F5F7', '', clGNone);
+
+  pnlHeader = profil.AddNewProPanel(profil, 'pnlHeader');
+  pnlHeader.Align  = alTop;
+  pnlHeader.Height = 148;
+  pnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3C3489');
+  pnlHeader.SetclProSettings(pnlHeader.clProSettings);
+  
+  btnGeri = profil.AddNewProButton(pnlHeader, 'btnGeri', '←');
+  btnGeri.Align = alNone;
+  btnGeri.Width = 44;
+  btnGeri.Height = 36;
+  btnGeri.Position.X = 12;
+  btnGeri.Position.Y = 14;
+  
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#534AB7');
+  btnGeri.clProSettings.BorderWidth = 0;
+  btnGeri.clProSettings.FontSize = 20;
+  btnGeri.clProSettings.FontHorzAlign = palCenter;
+  btnGeri.clProSettings.FontVertAlign = palCenter;
+  btnGeri.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnGeri.clProSettings.IsFill = True;
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 10;
+  btnGeri.clProSettings.RoundWidth = 10;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  
+  profil.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+
+  imgAvatar = profil.AddNewProImage(pnlHeader, 'imgAvatar');
+  imgAvatar.Align    = alNone;
+  imgAvatar.Width    = 72;
+  imgAvatar.Height   = 72;
+  imgAvatar.Position.X = (profil.clWidth * 0.5) - 36;
+  imgAvatar.Position.Y = 18;
+  imgAvatar.clProSettings.PictureSource =
+      'https://static.vecteezy.com/system/resources/thumbnails/007/749/454/small/man-and-woman-profile-avatar-in-a-flat-style-male-and-female-face-icon-vector.jpg';
+  imgAvatar.clProSettings.PictureAutoFit = True;
+  imgAvatar.SetclProSettings(imgAvatar.clProSettings);
+
+  lblAdSoyad = profil.AddNewProLabel(pnlHeader, 'lblAdSoyad', 'Ahmet Yılmaz');
+  lblAdSoyad.Align      = alNone;
+  lblAdSoyad.Width      = profil.clWidth;
+  lblAdSoyad.Height     = 24;
+  lblAdSoyad.Position.X = 0;
+  lblAdSoyad.Position.Y = 98;
+  lblAdSoyad.clProSettings.FontSize  = 17;
+  lblAdSoyad.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  lblAdSoyad.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAdSoyad.clProSettings.TextSettings.HorzAlign  = taCenter;
+  lblAdSoyad.SetclProSettings(lblAdSoyad.clProSettings);
+
+  lblRolBadge = profil.AddNewProLabel(pnlHeader, 'lblRolBadge', 'Yönetici');
+  lblRolBadge.Align      = alNone;
+  lblRolBadge.Width      = 90;
+  lblRolBadge.Height     = 22;
+  lblRolBadge.Position.X = (profil.clWidth * 0.5) - 45;
+  lblRolBadge.Position.Y = 124;
+  lblRolBadge.clProSettings.FontSize        = 11;
+  lblRolBadge.clProSettings.FontColor       = clAlphaColor.clHexToColor('#3C3489');
+  lblRolBadge.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EEEDFE');
+  lblRolBadge.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblRolBadge.clProSettings.TextSettings.HorzAlign  = taCenter;
+  lblRolBadge.SetclProSettings(lblRolBadge.clProSettings);
+
+  scrollBody = profil.AddNewVertScrollBox(profil, 'scrollBody');
+  scrollBody.Align = alClient;
+
+  pnlBody = profil.AddNewProPanel(scrollBody, 'pnlBody');
+  pnlBody.Align          = alTop;
+  pnlBody.Margins.Top    = 12;
+  pnlBody.Margins.Left   = 12;
+  pnlBody.Margins.Right  = 12;
+  pnlBody.Margins.Bottom = 12;
+  pnlBody.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlBody.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E8E8E8');
+  pnlBody.clProSettings.BorderWidth = 1;
+  pnlBody.SetclProSettings(pnlBody.clProSettings);
+
+  // Yan Yana Hizalanmış Yeni Satırlarımız
+  lblValID      = SatirOlustur(pnlBody, 'rowID',      'Çalışan ID:');
+  sep1          = SepOlustur(pnlBody, 'sep1');
+
+  lblValDept    = SatirOlustur(pnlBody, 'rowDept',    'Departman Adı:');
+  sep2          = SepOlustur(pnlBody, 'sep2');
+
+  lblValPozis   = SatirOlustur(pnlBody, 'rowPozis',   'Ünvan:');
+  sep3          = SepOlustur(pnlBody, 'sep3');
+
+  lblValRol     = SatirOlustur(pnlBody, 'rowRol',     'Rol:');
+  sep4          = SepOlustur(pnlBody, 'sep4');
+
+  lblValEposta  = SatirOlustur(pnlBody, 'rowEposta',  'E-Posta:');
+  lblValEposta.clProSettings.FontColor = clAlphaColor.clHexToColor('#3C3489');
+  lblValEposta.SetclProSettings(lblValEposta.clProSettings);
+  sep5          = SepOlustur(pnlBody, 'sep5');
+
+  lblValTelefon = SatirOlustur(pnlBody, 'rowTelefon', 'Telefon No:');
+  sep6          = SepOlustur(pnlBody, 'sep6');
+
+  lblValVardiya = SatirOlustur(pnlBody, 'rowVardiya', 'Çalışma Saati:');
+  sep7          = SepOlustur(pnlBody, 'sep7');
+
+  lblValGiris   = SatirOlustur(pnlBody, 'rowGiris',   'İşe Giriş:');
+  sep8          = SepOlustur(pnlBody, 'sep8');
+
+  // Durum Satırını da yan yana olacak şekilde özel olarak hizalıyoruz
+  pnlDurum = profil.AddNewProPanel(pnlBody, 'pnlDurum');
+  pnlDurum.Align = alMostTop;
+  pnlDurum.Height = 45;
+  
+  lblSecDurum = profil.AddNewProLabel(pnlDurum, 'lblSecDurum', 'Durum:');
+  lblSecDurum.Align = alLeft;
+  lblSecDurum.Width = 120;
+  lblSecDurum.Margins.Left = 16;
+  lblSecDurum.clProSettings.FontSize = 12;
+  lblSecDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#888888');
+  lblSecDurum.clProSettings.FontVertAlign = palCenter;
+  lblSecDurum.SetclProSettings(lblSecDurum.clProSettings);
+  
+  rectDurumNokta = profil.AddNewProPanel(pnlDurum, 'rectDurumNokta');
+  rectDurumNokta.Align = alLeft;
+  rectDurumNokta.Height = 10;
+  rectDurumNokta.Width = 10;
+  rectDurumNokta.Margins.Left = 0;
+  rectDurumNokta.Margins.Top = 17;
+  rectDurumNokta.clProSettings.IsRound = True;
+  rectDurumNokta.clProSettings.RoundHeight = 5;
+  rectDurumNokta.clProSettings.RoundWidth = 5;
+  rectDurumNokta.SetclProSettings(rectDurumNokta.clProSettings);
+  
+  lblValDurum = profil.AddNewProLabel(pnlDurum, 'lblValDurum', '–');
+  lblValDurum.Align = alClient;
+  lblValDurum.Margins.Left = 8;
+  lblValDurum.Margins.Right = 16;
+  lblValDurum.clProSettings.FontSize = 14;
+  lblValDurum.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblValDurum.clProSettings.FontVertAlign = palCenter;
+  lblValDurum.SetclProSettings(lblValDurum.clProSettings);
+
+  pnlFooter = profil.AddNewProPanel(profil, 'pnlFooter');
+  pnlFooter.Align  = alBottom;
+  pnlFooter.Height = 44;
+  pnlFooter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EEEDFE');
+  pnlFooter.SetclProSettings(pnlFooter.clProSettings);
+
+  lblFooterNot = profil.AddNewProLabel(pnlFooter, 'lblFooterNot', 'Bilgilerini güncellemek için İK departmanı ile iletişime geç.');
+  lblFooterNot.Align  = alClient;
+  lblFooterNot.clProSettings.FontSize  = 11;
+  lblFooterNot.clProSettings.FontColor = clAlphaColor.clHexToColor('#534AB7');
+  lblFooterNot.clProSettings.TextSettings.HorzAlign = taCenter;
+  lblFooterNot.SetclProSettings(lblFooterNot.clProSettings);
+
+  ProfilYukle;
+  profil.Run;
+}

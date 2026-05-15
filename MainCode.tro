@@ -1,0 +1,193 @@
+var
+  Form: TCLForm;
+  btnPersonel, btnYonetici: TClProButton;
+  lblBaslik, lblAltBaslik, lblSystem, lblDeveloper, lblTeam: TClProLabel;
+  imgLogo: TClProImage;  
+
+
+void GoToPersonel
+{
+  Form.clHide;
+  Clomosy.RunUnit('calisangiris');
+}
+
+
+void GoToYonetici
+{ 
+  Form.clHide;
+  Clomosy.RunUnit('yoneticigiris');
+}
+
+
+// ── PERSONEL BUTONU HAREKET VE RENK EFEKTLERİ ────────
+void PersonelDown
+{
+  btnPersonel.Top = btnPersonel.Top + 4;
+  btnPersonel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#09132B');
+  btnPersonel.SetclProSettings(btnPersonel.clProSettings);
+}
+
+
+void PersonelUp
+{
+  btnPersonel.Top = btnPersonel.Top - 4;
+  btnPersonel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnPersonel.SetclProSettings(btnPersonel.clProSettings);
+}
+
+
+// ── YÖNETİCİ BUTONU HAREKET VE RENK EFEKTLERİ ────────
+void YoneticiDown
+{
+  btnYonetici.Top = btnYonetici.Top + 4;
+  btnYonetici.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#CBD5E0');
+  btnYonetici.SetclProSettings(btnYonetici.clProSettings);
+}
+
+
+void YoneticiUp
+{
+  btnYonetici.Top = btnYonetici.Top - 4;
+  btnYonetici.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0');
+  btnYonetici.SetclProSettings(btnYonetici.clProSettings);
+}
+
+
+{
+  Form = TCLForm.Create(nil);
+  Form.SetFormColor('#E2E8F0', '#B0C4DE', clGVertical);
+
+  // ── LOGO ─────────────────────────────────────────────
+  imgLogo = Form.AddNewProImage(Form, 'imgLogo');
+  imgLogo.Align = alNone;
+  imgLogo.Width = 90;
+  imgLogo.Height = 90;
+  imgLogo.Position.X = (Form.clWidth / 2) - 45;
+  imgLogo.Position.Y = Form.clHeight * 0.08;
+  imgLogo.clProSettings.PictureSource = 'https://autogasmarket.by/upload/iblock/0ea/iud0crej7fcyw1mqszuq7z9o97mckj0v.png';
+  imgLogo.clProSettings.PictureAutoFit = True;
+  imgLogo.SetclProSettings(imgLogo.clProSettings);
+
+  // ── BAŞLIK ───────────────────────────────────────────
+  lblBaslik = Form.AddNewProLabel(Form, 'lblBaslik', 'ATİKER A.Ş.');
+  lblBaslik.Align = alNone;
+  lblBaslik.Width = Form.clWidth;
+  lblBaslik.Height = 40;
+  lblBaslik.Left = 0;
+  lblBaslik.Top = imgLogo.Position.Y + imgLogo.Height + 15;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0D1B3E');
+  lblBaslik.clProSettings.FontSize = 26;
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  // ── ALT BAŞLIK ───────────────────────────────────────
+  lblAltBaslik = Form.AddNewProLabel(Form, 'lblAltBaslik', 'Vardiya Takip Sistemi');
+  lblAltBaslik.Align = alNone;
+  lblAltBaslik.Width = Form.clWidth;
+  lblAltBaslik.Height = 24;
+  lblAltBaslik.Left = 0;
+  lblAltBaslik.Top = lblBaslik.Top + 35;
+  lblAltBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#4A5568');
+  lblAltBaslik.clProSettings.FontSize = 13;
+  lblAltBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAltBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblAltBaslik.SetclProSettings(lblAltBaslik.clProSettings);
+
+  // ── BUTON: PERSONEL GİRİŞİ ───────────────────────────
+  btnPersonel = Form.AddNewProButton(Form, 'btnPersonel', 'Personel Girişi');
+  btnPersonel.Align = alNone;
+  btnPersonel.Width = Form.clWidth * 0.75;
+  btnPersonel.Height = 55;
+  btnPersonel.Left = (Form.clWidth - btnPersonel.Width) / 2;
+  btnPersonel.Top = (Form.clHeight / 2) + 20;
+  btnPersonel.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnPersonel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnPersonel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnPersonel.clProSettings.FontSize = 16;
+  btnPersonel.clProSettings.FontHorzAlign = palCenter;
+  btnPersonel.clProSettings.FontVertAlign = palCenter;
+  btnPersonel.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnPersonel.clProSettings.IsTransparent = False;
+  btnPersonel.clProSettings.IsFill = True;
+  btnPersonel.clProSettings.IsRound = True;
+  btnPersonel.clProSettings.RoundHeight = 12;
+  btnPersonel.clProSettings.RoundWidth = 12;
+  btnPersonel.clProSettings.BorderWidth = 2;
+  btnPersonel.SetclProSettings(btnPersonel.clProSettings);
+  
+  Form.AddNewEvent(btnPersonel, tbeOnClick, 'GoToPersonel');
+  Form.AddNewEvent(btnPersonel, tbeOnMouseDown, 'PersonelDown');
+  Form.AddNewEvent(btnPersonel, tbeOnMouseUp, 'PersonelUp');
+
+  // ── BUTON: YÖNETİCİ GİRİŞİ ───────────────────────────
+  btnYonetici = Form.AddNewProButton(Form, 'btnYonetici', 'Yönetici Girişi');
+  btnYonetici.Align = alNone;
+  btnYonetici.Width = Form.clWidth * 0.75;
+  btnYonetici.Height = 55;
+  btnYonetici.Left = (Form.clWidth - btnYonetici.Width) / 2;
+  btnYonetici.Top = btnPersonel.Top + 75;
+  btnYonetici.clProSettings.FontColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnYonetici.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0');
+  btnYonetici.clProSettings.BorderColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnYonetici.clProSettings.FontSize = 16;
+  btnYonetici.clProSettings.FontHorzAlign = palCenter;
+  btnYonetici.clProSettings.FontVertAlign = palCenter;
+  btnYonetici.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnYonetici.clProSettings.IsTransparent = False;
+  btnYonetici.clProSettings.IsFill = True;
+  btnYonetici.clProSettings.IsRound = True;
+  btnYonetici.clProSettings.RoundHeight = 12;
+  btnYonetici.clProSettings.RoundWidth = 12;
+  btnYonetici.clProSettings.BorderWidth = 2;
+  btnYonetici.SetclProSettings(btnYonetici.clProSettings);
+  
+  Form.AddNewEvent(btnYonetici, tbeOnClick, 'GoToYonetici');
+  Form.AddNewEvent(btnYonetici, tbeOnMouseDown, 'YoneticiDown');
+  Form.AddNewEvent(btnYonetici, tbeOnMouseUp, 'YoneticiUp');
+
+  // ── TAKIM BİLGİSİ ────────────────────────────────────
+  lblTeam = Form.AddNewProLabel(Form, 'lblTeam', 'Team Binary KTO');
+  lblTeam.Align = alNone;
+  lblTeam.Width = Form.clWidth;
+  lblTeam.Height = 24;
+  lblTeam.Left = 0;
+  lblTeam.Top = Form.clHeight - 104;
+  lblTeam.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  lblTeam.clProSettings.FontSize = 12;
+  lblTeam.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblTeam.clProSettings.FontHorzAlign = palCenter;
+  lblTeam.clProSettings.FontVertAlign = palCenter;
+  lblTeam.SetclProSettings(lblTeam.clProSettings);
+
+  // ── GELİŞTİRİCİ BİLGİSİ ──────────────────────────────
+  lblDeveloper = Form.AddNewProLabel(Form, 'lblDeveloper', 'Developed by Ela Nur Göçel & Yunus Emre Atmaz');
+  lblDeveloper.Align = alNone;
+  lblDeveloper.Width = Form.clWidth;
+  lblDeveloper.Height = 28;
+  lblDeveloper.Left = 0;
+  lblDeveloper.Top = Form.clHeight - 80;
+  lblDeveloper.clProSettings.FontColor = clAlphaColor.clHexToColor('#0D1B3E');
+  lblDeveloper.clProSettings.FontSize = 11;
+  lblDeveloper.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblDeveloper.clProSettings.FontHorzAlign = palCenter;
+  lblDeveloper.clProSettings.FontVertAlign = palCenter;
+  lblDeveloper.clProSettings.TextSettings.WordWrap = True;
+  lblDeveloper.SetclProSettings(lblDeveloper.clProSettings);
+
+  // ── SYSTEM ONLINE DURUMU ─────────────────────────────
+  lblSystem = Form.AddNewProLabel(Form, 'lblSystem', '● SYSTEM ONLINE');
+  lblSystem.Align = alNone;
+  lblSystem.Width = Form.clWidth;
+  lblSystem.Height = 24;
+  lblSystem.Left = 0;
+  lblSystem.Top = Form.clHeight - 48;
+  lblSystem.clProSettings.FontColor = clAlphaColor.clHexToColor('#38A169');
+  lblSystem.clProSettings.FontSize = 12;
+  lblSystem.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblSystem.clProSettings.FontHorzAlign = palCenter;
+  lblSystem.clProSettings.FontVertAlign = palCenter;
+  lblSystem.SetclProSettings(lblSystem.clProSettings);
+
+  Form.Run;
+}

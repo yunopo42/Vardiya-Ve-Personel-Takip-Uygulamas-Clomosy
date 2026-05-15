@@ -1,0 +1,805 @@
+var
+  personelyonetim: TCLForm;
+
+  RestClient: TclRest;
+  SUPABASE_URL: String;
+  SUPABASE_KEY: String;
+
+  pnlTop, pnlForm, pnlButtons: TclProPanel;
+  lblBaslik, lblFormBaslik, lblListeBaslik: TclProLabel;
+  btnGeri, btnYenile, btnEkle, btnTemizle: TclProButton;
+  edtAd, edtEmail, edtSifre, edtDepartman, edtPozisyon: TClEdit;
+
+  scrollListe: TClVertScrollBox;
+  listeNo: Integer;
+
+  duzenlemeModu: Boolean;
+  seciliUserId: String;
+
+
+void SupabaseAyarla
+{
+  SUPABASE_URL = ''; // Supabase URL removed for GitHub publishing.
+  SUPABASE_KEY = ''; // Supabase anon key removed for GitHub publishing.
+}
+
+
+function SupabaseTextTemizle(metin: String): String;
+var
+  sonuc: String;
+{
+  sonuc = metin;
+
+  if (sonuc == '""')
+  {
+    Result = '';
+    exit;
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, 1, 1) == '"')
+      sonuc = Copy(sonuc, 2, Length(sonuc));
+  }
+
+  if (Length(sonuc) > 0)
+  {
+    if (Copy(sonuc, Length(sonuc), 1) == '"')
+      sonuc = Copy(sonuc, 1, Length(sonuc) - 1);
+  }
+
+  Result = sonuc;
+}
+
+
+function ParcaAl(metin: String; ayirac: String; index: Integer): String;
+var
+  i, p: Integer;
+  kalan, parca: String;
+{
+  kalan = metin;
+  parca = '';
+
+  for i = 1 to index
+  {
+    p = Pos(ayirac, kalan);
+
+    if (p > 0)
+    {
+      parca = Copy(kalan, 1, p - 1);
+      kalan = Copy(kalan, p + Length(ayirac), Length(kalan));
+    }
+    else
+    {
+      parca = kalan;
+      kalan = '';
+    }
+  }
+
+  Result = parca;
+}
+
+
+void GoBack
+{
+  personelyonetim.clHide;
+  Clomosy.RunUnit('yonetici');
+}
+
+
+void SayfayiYenile
+{
+  personelyonetim.clHide;
+  Clomosy.RunUnit('personelyonetim');
+}
+
+
+void FormuTemizle
+{
+  duzenlemeModu = False;
+  seciliUserId = '';
+
+  edtAd.Text = '';
+  edtEmail.Text = '';
+  edtSifre.Text = '';
+  edtDepartman.Text = '';
+  edtPozisyon.Text = '';
+
+  lblFormBaslik.Text = 'Yeni Personel Ekle';
+  btnEkle.Text = 'Personel Ekle';
+
+  lblFormBaslik.SetclProSettings(lblFormBaslik.clProSettings);
+  btnEkle.SetclProSettings(btnEkle.clProSettings);
+}
+
+
+void BilgiKartOlustur(metin: String)
+var
+  pnlKart: TclProPanel;
+  lblInfo: TclProLabel;
+{
+  listeNo = listeNo + 1;
+
+  pnlKart = personelyonetim.AddNewProPanel(scrollListe, 'pnlInfo_' + IntToStr(listeNo));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 100;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 14;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  lblInfo = personelyonetim.AddNewProLabel(pnlKart, 'lblInfo_' + IntToStr(listeNo), metin);
+  lblInfo.Align = alClient;
+  lblInfo.Margins.Left = 16;
+  lblInfo.Margins.Right = 16;
+  lblInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblInfo.clProSettings.FontSize = 13;
+  lblInfo.clProSettings.FontVertAlign = palCenter;
+  lblInfo.clProSettings.TextSettings.WordWrap = True;
+  lblInfo.SetclProSettings(lblInfo.clProSettings);
+}
+
+
+void PersonelDuzenleSec
+var
+  btn: TClProButton;
+  data: String;
+{
+  btn = TClProButton(personelyonetim.clSender);
+  data = btn.TagString;
+
+  seciliUserId = ParcaAl(data, '|', 1);
+  edtAd.Text = ParcaAl(data, '|', 2);
+  edtEmail.Text = ParcaAl(data, '|', 3);
+  edtDepartman.Text = ParcaAl(data, '|', 4);
+  edtPozisyon.Text = ParcaAl(data, '|', 5);
+  edtSifre.Text = ParcaAl(data, '|', 6);
+
+  duzenlemeModu = True;
+
+  lblFormBaslik.Text = 'Personel Düzenle';
+  btnEkle.Text = 'Personeli Güncelle';
+
+  lblFormBaslik.SetclProSettings(lblFormBaslik.clProSettings);
+  btnEkle.SetclProSettings(btnEkle.clProSettings);
+
+  ShowMessage('Personel bilgileri forma aktarıldı. Düzenleyip Personeli Güncelle butonuna bas.');
+}
+
+
+void PersonelDurumGuncelle
+var
+  btn: TClProButton;
+  data, userId, yeniDurum: String;
+  p: Integer;
+  url, body, response: String;
+{
+  btn = TClProButton(personelyonetim.clSender);
+  data = btn.TagString;
+
+  p = Pos('|', data);
+
+  if (p <= 0)
+  {
+    ShowMessage('Personel bilgisi okunamadı.');
+    exit;
+  }
+
+  userId = Copy(data, 1, p - 1);
+  yeniDurum = Copy(data, p + 1, Length(data));
+
+  url = SUPABASE_URL + '/rpc/update_personel_status_manage';
+  body = '{"p_user_id":' + userId + ',"p_status":"' + yeniDurum + '"}';
+
+  try
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = SupabaseTextTemizle(RestClient.Response);
+
+    if (response == '')
+      ShowMessage('Personel durumu güncellendi.')
+    else
+      ShowMessage(response);
+
+    SayfayiYenile;
+
+  except
+    ShowMessage('Personel durumu güncellenemedi: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void PersonelSil
+var
+  btn: TClProButton;
+  userId, url, body, response: String;
+{
+  btn = TClProButton(personelyonetim.clSender);
+  userId = btn.TagString;
+
+  if (userId == '')
+  {
+    ShowMessage('Silinecek personel ID bilgisi alınamadı.');
+    exit;
+  }
+
+  url = SUPABASE_URL + '/rpc/delete_personel_manage';
+  body = '{"p_user_id":' + userId + '}';
+
+  try
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = SupabaseTextTemizle(RestClient.Response);
+
+    if (response == '')
+      ShowMessage('Personel silindi.')
+    else
+      ShowMessage(response);
+
+    SayfayiYenile;
+
+  except
+    ShowMessage('Personel silinemedi: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void PersonelKartOlustur(index: Integer; kayit: String)
+var
+  pnlKart, pnlSol, pnlAlt: TclProPanel;
+  lblAd, lblBilgi, lblDurum: TclProLabel;
+  btnDurum, btnDuzenle, btnSil: TclProButton;
+  idText, ad, email, departman, pozisyon, durum, yeniDurum, sifre: String;
+{
+  idText = ParcaAl(kayit, '|', 1);
+  ad = ParcaAl(kayit, '|', 2);
+  email = ParcaAl(kayit, '|', 3);
+  departman = ParcaAl(kayit, '|', 4);
+  pozisyon = ParcaAl(kayit, '|', 5);
+  durum = ParcaAl(kayit, '|', 6);
+
+  if (idText == '')
+    idText = '-';
+
+  if (ad == '')
+    ad = 'İsimsiz Personel';
+
+  if (email == '')
+    email = '-';
+
+  if (departman == '')
+    departman = '-';
+
+  if (pozisyon == '')
+    pozisyon = '-';
+
+  if (durum == '')
+    durum = 'Aktif';
+
+  sifre = '123456';
+
+  pnlKart = personelyonetim.AddNewProPanel(scrollListe, 'pnlPersonel_' + IntToStr(index));
+  pnlKart.Align = alTop;
+  pnlKart.Height = 160;
+  pnlKart.Margins.Left = 14;
+  pnlKart.Margins.Right = 14;
+  pnlKart.Margins.Top = 10;
+  pnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlKart.clProSettings.BorderWidth = 1;
+  pnlKart.clProSettings.IsRound = True;
+  pnlKart.clProSettings.RoundHeight = 14;
+  pnlKart.clProSettings.RoundWidth = 14;
+  pnlKart.SetclProSettings(pnlKart.clProSettings);
+
+  pnlSol = personelyonetim.AddNewProPanel(pnlKart, 'pnlSol_' + IntToStr(index));
+  pnlSol.Align = alLeft;
+  pnlSol.Width = 6;
+
+  if (durum == 'Aktif')
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#10B981')
+  else
+    pnlSol.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EF4444');
+
+  pnlSol.SetclProSettings(pnlSol.clProSettings);
+
+  lblAd = personelyonetim.AddNewProLabel(pnlKart, 'lblAd_' + IntToStr(index), ad);
+  lblAd.Align = alTop;
+  lblAd.Height = 28;
+  lblAd.Margins.Left = 16;
+  lblAd.Margins.Right = 12;
+  lblAd.Margins.Top = 10;
+  lblAd.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblAd.clProSettings.FontSize = 15;
+  lblAd.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblAd.SetclProSettings(lblAd.clProSettings);
+
+  lblBilgi = personelyonetim.AddNewProLabel(pnlKart, 'lblBilgi_' + IntToStr(index), email + #13#10 + departman + ' | ' + pozisyon);
+  lblBilgi.Align = alTop;
+  lblBilgi.Height = 42;
+  lblBilgi.Margins.Left = 16;
+  lblBilgi.Margins.Right = 12;
+  lblBilgi.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  lblBilgi.clProSettings.FontSize = 11;
+  lblBilgi.clProSettings.TextSettings.WordWrap = True;
+  lblBilgi.SetclProSettings(lblBilgi.clProSettings);
+
+  lblDurum = personelyonetim.AddNewProLabel(pnlKart, 'lblDurum_' + IntToStr(index), 'Durum: ' + durum);
+  lblDurum.Align = alTop;
+  lblDurum.Height = 24;
+  lblDurum.Margins.Left = 16;
+  lblDurum.Margins.Right = 12;
+  lblDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#334155');
+  lblDurum.clProSettings.FontSize = 12;
+  lblDurum.clProSettings.FontVertAlign = palCenter;
+  lblDurum.SetclProSettings(lblDurum.clProSettings);
+
+  pnlAlt = personelyonetim.AddNewProPanel(pnlKart, 'pnlAlt_' + IntToStr(index));
+  pnlAlt.Align = alBottom;
+  pnlAlt.Height = 45;
+  pnlAlt.Margins.Left = 16;
+  pnlAlt.Margins.Right = 12;
+  pnlAlt.Margins.Bottom = 10;
+  pnlAlt.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlAlt.SetclProSettings(pnlAlt.clProSettings);
+
+  if (durum == 'Aktif')
+    yeniDurum = 'Pasif'
+  else
+    yeniDurum = 'Aktif';
+
+  btnDurum = personelyonetim.AddNewProButton(pnlAlt, 'btnDurum_' + IntToStr(index), yeniDurum);
+  btnDurum.Align = alLeft;
+  btnDurum.Width = 82;
+  btnDurum.TagString = idText + '|' + yeniDurum;
+
+  if (yeniDurum == 'Pasif')
+  {
+    btnDurum.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEE2E2');
+    btnDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#DC2626');
+  }
+  else
+  {
+    btnDurum.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DCFCE7');
+    btnDurum.clProSettings.FontColor = clAlphaColor.clHexToColor('#16A34A');
+  }
+
+  btnDurum.clProSettings.BorderWidth = 0;
+  btnDurum.clProSettings.FontSize = 12;
+  btnDurum.clProSettings.IsRound = True;
+  btnDurum.clProSettings.RoundHeight = 8;
+  btnDurum.clProSettings.RoundWidth = 8;
+  btnDurum.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnDurum.SetclProSettings(btnDurum.clProSettings);
+  personelyonetim.AddNewEvent(btnDurum, tbeOnClick, 'PersonelDurumGuncelle');
+
+  btnDuzenle = personelyonetim.AddNewProButton(pnlAlt, 'btnDuzenle_' + IntToStr(index), 'Düzenle');
+  btnDuzenle.Align = alClient;
+  btnDuzenle.Margins.Left = 8;
+  btnDuzenle.Margins.Right = 8;
+  btnDuzenle.TagString = idText + '|' + ad + '|' + email + '|' + departman + '|' + pozisyon + '|' + sifre;
+  btnDuzenle.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnDuzenle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnDuzenle.clProSettings.BorderWidth = 0;
+  btnDuzenle.clProSettings.FontSize = 12;
+  btnDuzenle.clProSettings.IsRound = True;
+  btnDuzenle.clProSettings.RoundHeight = 8;
+  btnDuzenle.clProSettings.RoundWidth = 8;
+  btnDuzenle.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnDuzenle.SetclProSettings(btnDuzenle.clProSettings);
+  personelyonetim.AddNewEvent(btnDuzenle, tbeOnClick, 'PersonelDuzenleSec');
+
+  btnSil = personelyonetim.AddNewProButton(pnlAlt, 'btnSil_' + IntToStr(index), 'Sil');
+  btnSil.Align = alRight;
+  btnSil.Width = 75;
+  btnSil.TagString = idText;
+  btnSil.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEE2E2');
+  btnSil.clProSettings.FontColor = clAlphaColor.clHexToColor('#DC2626');
+  btnSil.clProSettings.BorderWidth = 0;
+  btnSil.clProSettings.FontSize = 12;
+  btnSil.clProSettings.IsRound = True;
+  btnSil.clProSettings.RoundHeight = 8;
+  btnSil.clProSettings.RoundWidth = 8;
+  btnSil.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnSil.SetclProSettings(btnSil.clProSettings);
+  personelyonetim.AddNewEvent(btnSil, tbeOnClick, 'PersonelSil');
+}
+
+
+void PersonelleriYukle
+var
+  url, response, kalan, kayit: String;
+  bitis, index: Integer;
+{
+  try
+    url = SUPABASE_URL + '/rpc/list_personel_manage';
+
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+    RestClient.Body = '{}';
+    RestClient.Execute;
+
+    response = SupabaseTextTemizle(RestClient.Response);
+
+    if (response == '')
+    {
+      BilgiKartOlustur('Kayıtlı personel bulunamadı.');
+      exit;
+    }
+
+    if (response == 'null')
+    {
+      BilgiKartOlustur('Kayıtlı personel bulunamadı.');
+      exit;
+    }
+
+    if (response == '[]')
+    {
+      BilgiKartOlustur('Kayıtlı personel bulunamadı.');
+      exit;
+    }
+
+    if (response == '0')
+    {
+      BilgiKartOlustur('Personel listesi boş döndü.');
+      exit;
+    }
+
+    if (Copy(response, 1, 1) == '{')
+    {
+      BilgiKartOlustur('Supabase hatası: ' + response);
+      exit;
+    }
+
+    if (Pos('|', response) <= 0)
+    {
+      BilgiKartOlustur('Personel liste formatı okunamadı: ' + response);
+      exit;
+    }
+
+    kalan = response;
+    index = 0;
+
+    while (Length(kalan) > 0)
+    {
+      bitis = Pos(';;', kalan);
+
+      if (bitis > 0)
+      {
+        kayit = Copy(kalan, 1, bitis - 1);
+        kalan = Copy(kalan, bitis + 2, Length(kalan));
+      }
+      else
+      {
+        kayit = kalan;
+        kalan = '';
+      }
+
+      if (Pos('|', kayit) > 0)
+      {
+        PersonelKartOlustur(index, kayit);
+        index = index + 1;
+      }
+    }
+
+    if (index == 0)
+    {
+      BilgiKartOlustur('Personel kaydı okunamadı. Gelen veri: ' + response);
+    }
+
+  except
+    BilgiKartOlustur('Personel listesi alınamadı: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void PersonelEkle
+var
+  ad, email, sifre, departman, pozisyon: String;
+  url, body, response: String;
+{
+  ad = edtAd.Text;
+  email = edtEmail.Text;
+  sifre = edtSifre.Text;
+  departman = edtDepartman.Text;
+  pozisyon = edtPozisyon.Text;
+
+  if (ad == '')
+  {
+    ShowMessage('Ad soyad boş bırakılamaz.');
+    exit;
+  }
+
+  if (email == '')
+  {
+    ShowMessage('E-posta boş bırakılamaz.');
+    exit;
+  }
+
+  if (sifre == '')
+  {
+    ShowMessage('Şifre boş bırakılamaz.');
+    exit;
+  }
+
+  if (departman == '')
+    departman = '-';
+
+  if (pozisyon == '')
+    pozisyon = '-';
+
+  if (duzenlemeModu == True)
+  {
+    if (seciliUserId == '')
+    {
+      ShowMessage('Güncellenecek personel seçilmedi.');
+      exit;
+    }
+
+    url = SUPABASE_URL + '/rpc/update_personel_manage';
+
+    body = '{"p_user_id":' + seciliUserId +
+           ',"p_full_name":"' + ad +
+           '","p_email":"' + email +
+           '","p_password":"' + sifre +
+           '","p_department":"' + departman +
+           '","p_position":"' + pozisyon + '"}';
+  }
+  else
+  {
+    url = SUPABASE_URL + '/rpc/create_personel_manage';
+
+    body = '{"p_full_name":"' + ad +
+           '","p_email":"' + email +
+           '","p_password":"' + sifre +
+           '","p_department":"' + departman +
+           '","p_position":"' + pozisyon + '"}';
+  }
+
+  try
+    RestClient = TclRest.Create;
+    RestClient.BaseURL = url;
+    RestClient.Accept = 'application/json';
+    RestClient.ContentType = 'application/json';
+    RestClient.Method = rmPOST;
+    RestClient.AddHeader('apikey', SUPABASE_KEY);
+    RestClient.AddHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+    RestClient.Body = body;
+    RestClient.Execute;
+
+    response = SupabaseTextTemizle(RestClient.Response);
+
+    if (response == '')
+    {
+      if (duzenlemeModu == True)
+        ShowMessage('Personel bilgileri güncellendi.')
+      else
+        ShowMessage('Personel oluşturuldu.');
+    }
+    else
+    {
+      ShowMessage(response);
+    }
+
+    SayfayiYenile;
+
+  except
+    ShowMessage('Personel işlemi yapılamadı: ' + LastExceptionClassName + ' - ' + LastExceptionMessage);
+  }
+}
+
+
+void BtnPress
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(personelyonetim.clSender);
+  btn.Position.Y = btn.Position.Y + 2;
+}
+
+
+void BtnRelease
+var
+  btn: TClProButton;
+{
+  btn = TClProButton(personelyonetim.clSender);
+  btn.Position.Y = btn.Position.Y - 2;
+}
+
+
+{
+  SupabaseAyarla;
+
+  duzenlemeModu = False;
+  seciliUserId = '';
+  listeNo = 0;
+
+  personelyonetim = TCLForm.Create(nil);
+  personelyonetim.SetFormColor('#F8FAFC', '', clGNone);
+
+  pnlTop = personelyonetim.AddNewProPanel(personelyonetim, 'pnlTop');
+  pnlTop.Align = alTop;
+  pnlTop.Height = 70;
+  pnlTop.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlTop.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlTop.clProSettings.BorderWidth = 1;
+  pnlTop.SetclProSettings(pnlTop.clProSettings);
+
+  btnGeri = personelyonetim.AddNewProButton(pnlTop, 'btnGeri', 'Geri');
+  btnGeri.Align = alLeft;
+  btnGeri.Width = 90;
+  btnGeri.Margins.Left = 10;
+  btnGeri.Margins.Top = 12;
+  btnGeri.Margins.Bottom = 12;
+  btnGeri.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0D1B3E');
+  btnGeri.clProSettings.IsRound = True;
+  btnGeri.clProSettings.RoundHeight = 8;
+  btnGeri.clProSettings.RoundWidth = 8;
+  btnGeri.SetclProSettings(btnGeri.clProSettings);
+  personelyonetim.AddNewEvent(btnGeri, tbeOnClick, 'GoBack');
+
+  lblBaslik = personelyonetim.AddNewProLabel(pnlTop, 'lblBaslik', 'Personel Yönetimi');
+  lblBaslik.Align = alClient;
+  lblBaslik.clProSettings.FontSize = 17;
+  lblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblBaslik.clProSettings.FontVertAlign = palCenter;
+  lblBaslik.clProSettings.FontHorzAlign = palCenter;
+  lblBaslik.SetclProSettings(lblBaslik.clProSettings);
+
+  btnYenile = personelyonetim.AddNewProButton(pnlTop, 'btnYenile', 'Yenile');
+  btnYenile.Align = alRight;
+  btnYenile.Width = 90;
+  btnYenile.Margins.Right = 10;
+  btnYenile.Margins.Top = 12;
+  btnYenile.Margins.Bottom = 12;
+  btnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnYenile.clProSettings.IsRound = True;
+  btnYenile.clProSettings.RoundHeight = 8;
+  btnYenile.clProSettings.RoundWidth = 8;
+  btnYenile.SetclProSettings(btnYenile.clProSettings);
+  personelyonetim.AddNewEvent(btnYenile, tbeOnClick, 'SayfayiYenile');
+
+  pnlForm = personelyonetim.AddNewProPanel(personelyonetim, 'pnlForm');
+  pnlForm.Align = alTop;
+  pnlForm.Height = 330;
+  pnlForm.Margins.Left = 14;
+  pnlForm.Margins.Right = 14;
+  pnlForm.Margins.Top = 12;
+  pnlForm.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  pnlForm.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  pnlForm.clProSettings.BorderWidth = 1;
+  pnlForm.clProSettings.IsRound = True;
+  pnlForm.clProSettings.RoundHeight = 14;
+  pnlForm.clProSettings.RoundWidth = 14;
+  pnlForm.SetclProSettings(pnlForm.clProSettings);
+
+  lblFormBaslik = personelyonetim.AddNewProLabel(pnlForm, 'lblFormBaslik', 'Yeni Personel Ekle');
+  lblFormBaslik.Align = alTop;
+  lblFormBaslik.Height = 32;
+  lblFormBaslik.Margins.Left = 14;
+  lblFormBaslik.Margins.Top = 8;
+  lblFormBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblFormBaslik.clProSettings.FontSize = 14;
+  lblFormBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblFormBaslik.SetclProSettings(lblFormBaslik.clProSettings);
+
+  edtAd = personelyonetim.AddNewEdit(pnlForm, 'edtAd', '');
+  edtAd.Align = alTop;
+  edtAd.Height = 34;
+  edtAd.Margins.Left = 14;
+  edtAd.Margins.Right = 14;
+  edtAd.Margins.Top = 6;
+  edtAd.TextPrompt = 'Ad Soyad';
+
+  edtEmail = personelyonetim.AddNewEdit(pnlForm, 'edtEmail', '');
+  edtEmail.Align = alTop;
+  edtEmail.Height = 34;
+  edtEmail.Margins.Left = 14;
+  edtEmail.Margins.Right = 14;
+  edtEmail.Margins.Top = 6;
+  edtEmail.TextPrompt = 'E-posta';
+
+  edtSifre = personelyonetim.AddNewEdit(pnlForm, 'edtSifre', '');
+  edtSifre.Align = alTop;
+  edtSifre.Height = 34;
+  edtSifre.Margins.Left = 14;
+  edtSifre.Margins.Right = 14;
+  edtSifre.Margins.Top = 6;
+  edtSifre.TextPrompt = 'Şifre';
+
+  edtDepartman = personelyonetim.AddNewEdit(pnlForm, 'edtDepartman', '');
+  edtDepartman.Align = alTop;
+  edtDepartman.Height = 34;
+  edtDepartman.Margins.Left = 14;
+  edtDepartman.Margins.Right = 14;
+  edtDepartman.Margins.Top = 6;
+  edtDepartman.TextPrompt = 'Departman';
+
+  edtPozisyon = personelyonetim.AddNewEdit(pnlForm, 'edtPozisyon', '');
+  edtPozisyon.Align = alTop;
+  edtPozisyon.Height = 34;
+  edtPozisyon.Margins.Left = 14;
+  edtPozisyon.Margins.Right = 14;
+  edtPozisyon.Margins.Top = 6;
+  edtPozisyon.TextPrompt = 'Pozisyon';
+
+  btnEkle = personelyonetim.AddNewProButton(pnlForm, 'btnEkle', 'Personel Ekle');
+  btnEkle.Align = alTop;
+  btnEkle.Height = 40;
+  btnEkle.Margins.Left = 14;
+  btnEkle.Margins.Right = 14;
+  btnEkle.Margins.Top = 10;
+  btnEkle.clProSettings.FontColor = clAlphaColor.clHexToColor('#FFFFFF');
+  btnEkle.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnEkle.clProSettings.BorderWidth = 0;
+  btnEkle.clProSettings.IsRound = True;
+  btnEkle.clProSettings.RoundHeight = 8;
+  btnEkle.clProSettings.RoundWidth = 8;
+  btnEkle.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnEkle.SetclProSettings(btnEkle.clProSettings);
+  personelyonetim.AddNewEvent(btnEkle, tbeOnClick, 'PersonelEkle');
+
+  btnTemizle = personelyonetim.AddNewProButton(pnlForm, 'btnTemizle', 'Temizle / Yeni Kayıt');
+  btnTemizle.Align = alTop;
+  btnTemizle.Height = 36;
+  btnTemizle.Margins.Left = 14;
+  btnTemizle.Margins.Right = 14;
+  btnTemizle.Margins.Top = 8;
+  btnTemizle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  btnTemizle.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DBEAFE');
+  btnTemizle.clProSettings.BorderWidth = 0;
+  btnTemizle.clProSettings.IsRound = True;
+  btnTemizle.clProSettings.RoundHeight = 8;
+  btnTemizle.clProSettings.RoundWidth = 8;
+  btnTemizle.clProSettings.TextSettings.Font.Style = [fsBold];
+  btnTemizle.SetclProSettings(btnTemizle.clProSettings);
+  personelyonetim.AddNewEvent(btnTemizle, tbeOnClick, 'FormuTemizle');
+
+  lblListeBaslik = personelyonetim.AddNewProLabel(personelyonetim, 'lblListeBaslik', 'Personel Listesi');
+  lblListeBaslik.Align = alTop;
+  lblListeBaslik.Height = 34;
+  lblListeBaslik.Margins.Left = 16;
+  lblListeBaslik.Margins.Top = 10;
+  lblListeBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  lblListeBaslik.clProSettings.FontSize = 15;
+  lblListeBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+  lblListeBaslik.SetclProSettings(lblListeBaslik.clProSettings);
+
+  scrollListe = personelyonetim.AddNewVertScrollBox(personelyonetim, 'scrollListe');
+  scrollListe.Align = alClient;
+  scrollListe.ShowScrollBars = True;
+
+  PersonelleriYukle;
+
+  personelyonetim.Run;
+}
