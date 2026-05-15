@@ -29,43 +29,84 @@ Aşağıdaki ekran görüntüleri proje kökünde yer alan `ScreenShots/` klasö
 
 - `ScreenShots/Giris.png`
 - `ScreenShots/personelgiris.png`
-- `ScreenShots/yöneticiGiris.png`
+- `ScreenShots/yönetisigiris.png`
 - `ScreenShots/yöneticianasayfa.png`
 - `ScreenShots/yöneticivardiyatama.png`
 - `ScreenShots/yöneticivardiyatama2.png`
 - `ScreenShots/yöneticiizintalebi.png`
-- `ScreenShots/yöneticiverilenpingecmisi.png`
-- `ScreenShots/yöneticigirisçıkıştakibi.png`
+- `ScreenShots/yönetiverilenpingecmisi.png`
+- `ScreenShots/yöneticigiriscikistakibi.png`
 - `ScreenShots/calisananasayfa.png`
 - `ScreenShots/calisanizintalebi.png`
 - `ScreenShots/calisanmolatalebi.png`
 - `ScreenShots/calisanprofil.png`
 
-### Öne çıkan ekran görüntüleri
+### Sayfa tanımları ve yapılabilecek işlemler
 
-#### Ana giriş ekranı
+#### `ScreenShots/Giris.png`
+- Uygulama açılış ekranı.
+- Personel veya yönetici giriş ekranına yönlendirme.
 
-![Ana Giriş Ekranı](ScreenShots/Giris.png)
+#### `ScreenShots/personelgiris.png`
+- Personel e-posta ve şifre ile giriş.
+- Yeni kayıt oluşturma seçeneği.
+- Demo personel girişi.
 
-#### Personel giriş ekranı
+#### `ScreenShots/yönetisigiris.png`
+- Yönetici kullanıcı girişi.
+- Yönetici hesap geçmişi ve yetkilendirme.
+- Demo yönetici girişi.
 
-![Personel Giriş Ekranı](ScreenShots/personelgiris.png)
+#### `ScreenShots/yöneticianasayfa.png`
+- Yönetici kontrol paneli.
+- Günlük personel durumu özetleri.
+- Hızlı işlem butonları: İzin talepleri, vardiya atama.
+- Raporlara ve profillere erişim.
 
-#### Yönetici kontrol paneli
+#### `ScreenShots/yöneticivardiyatama.png`
+- Vardiya atama ekranı.
+- Personel seçme, tarih seçimi ve vardiya planlama.
+- Vardiya ekleme / düzenleme işlemleri.
 
-![Yönetici Ana Sayfa](ScreenShots/yöneticianasayfa.png)
+#### `ScreenShots/yöneticivardiyatama2.png`
+- Haftalık vardiya planı görünümü.
+- Seçilen günler ve vardiya detayları.
+- Atanmış vardiyaların listelenmesi.
 
-#### İzin talepleri ekranı
+#### `ScreenShots/yöneticiizintalebi.png`
+- Yönetici izin talepleri ekranı.
+- Bekleyen izinleri onaylama veya reddetme.
+- İzin durumunu ve tarih aralığını gösterme.
 
-![İzin Talepleri](ScreenShots/yöneticiizintalebi.png)
+#### `ScreenShots/yönetiverilenpingecmisi.png`
+- Personel PIN geçmişi.
+- Geçersiz / başarılı PIN kullanım kayıtları.
+- PIN sonuçlarının detaylı açıklamaları.
 
-#### Personel ana sayfası
+#### `ScreenShots/yöneticigiriscikistakibi.png`
+- Giriş/çıkış raporu ekranı.
+- Personelin günlük giriş-çıkış kayıtları.
+- Mevcut mesai ve mola durumları.
 
-![Personel Ana Sayfa](ScreenShots/calisananasayfa.png)
+#### `ScreenShots/calisananasayfa.png`
+- Personel ana kontrol paneli.
+- Günlük vardiya, izin ve mola durumu.
+- PIN kodu oluşturma ve hızlı işlemler.
 
-#### Personel izin talebi ekranı
+#### `ScreenShots/calisanizintalebi.png`
+- Personel izin talebi ekranı.
+- İzin türü seçme, başlangıç / bitiş tarihleri belirleme.
+- Talep gönderme ve açıklama ekleme.
 
-![Personel İzin Talebi](ScreenShots/calisanizintalebi.png)
+#### `ScreenShots/calisanmolatalebi.png`
+- Personel mola başlatma ekranı.
+- Mola hakkı ve mevcut mola durumunu gösterme.
+- Mola başlatma veya durumu güncelleme.
+
+#### `ScreenShots/calisanprofil.png`
+- Personel profil ekranı.
+- Çalışan detayları, departman, rol, e-posta ve durum bilgisi.
+- Kişisel bilgileri görüntüleme.
 
 Bu proje için ayrıca ek bir demo videosu da sağladınız:
 
